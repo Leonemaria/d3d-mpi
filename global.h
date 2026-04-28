@@ -3,38 +3,26 @@
 
 // global.h
 //
-struct physics
-{
-    double Ma;   // reference Mach number Ma
-    double Re;   // reference Reynolds number Re
-    double Fr;   // reference Froude number Fr
-    double Pr;   // reference Prandtl number Pr
-    double gam;  // air specific heats ratio gamma
-    double gaM2; // gamma*Ma^2
-    double S;    // Suherland temperature ratio
-};
-struct control
-{
-    int rank;     // MPI process rank
-    int N;        // polynomials max order
-    int startStep;// initial number of time steps
-    int endStep;  // final number of time steps
-    int nStSave;  // solution damping period
-    int nStDRes;  // residual damping period
-    int nStDHist; // integrated quantities damping period
-    double dt;    // time step
-};
-struct scheme
-{
-    int LES;      // kind of LES model
-    int CIF;      // kind of convective intercell numerical flux
-    bool src;     // source terms flag
-};
 struct global
 {
-    double dt;
-    physics phy;
-    control ctr;
-    scheme  sch;
+    double dt; // time step
+    double phy[6]; // array of phyisical data
+        // phy[0]: reference Mach number Ma        
+        // phy[1]: reference Reynolds number Re            
+        // phy[2]: reference Froude number Fr            
+        // phy[3]: reference Prandtl number Pr            
+        // phy[4]: air specific heats ratio gamma            
+        // phy[5]: Suherland temperature ratio         
+    int ctr[5]; // array of run controls
+     // ctr[0]: initial number of time steps
+     // ctr[1]: final number of time steps
+     // ctr[2]: solution damping period
+     // ctr[3]: residual damping period
+     // ctr[4]: integrated quantities damping period
+    int sch[4]; // array of numerical scheme definers
+     // sch[0]: polynomials max order
+     // sch[1]: kind of LES model
+     // sch[2]: kind of convective intercell numerical flux
+     // sch[3]: source terms flag
 };
 #endif

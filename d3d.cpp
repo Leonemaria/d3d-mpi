@@ -17,69 +17,80 @@
 //
 int main(int argc, char** argv)
 {
+//    int provided;
+//    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
     MPI_Init(&argc, &argv);
-    int world_size;
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-    int world_rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+    int w_size;
+    MPI_Comm_size(MPI_COMM_WORLD, &w_size);
+    int w_rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &w_rank);
 // Header
     std::cout << "*** d3d START ***\n";
 // input of computational ambient data
     global glb;
     std::string caseName, s; int Nth;
     int nameSize;
-    if (world_rank==0)
+    if (w_rank==0)
     {
-        std::cout << "sono zero\n";
+        s="./ambient.dat"; std::ifstream ambientFile(s); chk(ambientFile,s); // ambient data
+        ambientFile >> Nth; skipLine(ambientFile, 1); //reading the number of threads
+        std::cout << "N threads=" << Nth << std::endl;
+        ambientFile >> caseName; //reading the case name
+        nameSize=caseName.size();
+        ambientFile.close();
+        std::cout << "Running case: " << caseName << std::endl;
     }
-    s="./ambient.dat"; std::ifstream ambientFile(s); chk(ambientFile,s); // ambient data
-    ambientFile >> Nth; skipLine(ambientFile, 1); //reading the number of threads
-    std::cout << "N threads=" << Nth << std::endl;
+    MPI_Bcast(&Nth,1,MPI_INT,0,MPI_COMM_WORLD);
     omp_set_num_threads(Nth);
-    ambientFile >> caseName; //reading the case name
-    nameSize=caseName.size();
-    ambientFile.close();
-    std::cout << "Running case: " << caseName << std::endl;
-//    }
-    omp_set_num_threads(2);
     MPI_Bcast(&nameSize,1,MPI_INT,0,MPI_COMM_WORLD);
     caseName.resize(nameSize);
     MPI_Bcast(&caseName[0],nameSize,MPI_CHAR,0,MPI_COMM_WORLD);
     // imput of physical parametrs
-    s="./"+caseName+"/input/physics.dat"; std::ifstream physicsFile(s); chk(physicsFile,s); // physics data
-    readPhysics(physicsFile,glb);
-    physicsFile.close();
+    if (w_rank==0)
+    {
+        s="./"+caseName+"/input/physics.dat"; std::ifstream physicsFile(s); chk(physicsFile,s); // physics data
+        readPhysics(physicsFile,glb);
+        physicsFile.close();
+    }
+    MPI_Bcast(&glb.phy,6,MPI_DOUBLE,0,MPI_COMM_WORLD);
 // input of run data
-    s="./"+caseName+"/input/run.dat"; std::ifstream runDataFile(s); chk(runDataFile,s); // run setting data input file
-    readRun(runDataFile,glb);
-    runDataFile.close();
-    std::cout << "src=" << glb.sch[3] << std::endl;
+    if (w_rank==0)
+    {
+        s="./"+caseName+"/input/run.dat"; std::ifstream runDataFile(s); chk(runDataFile,s); // run setting data input file
+        readRun(runDataFile,glb);
+        runDataFile.close();
+        std::cout << "pol. order N=" << glb.sch[0] << std::endl;
+        std::cout << "Num. of Modes=" << nModes(glb.sch[0]) << std::endl;
+        std::cout << "src=" << glb.sch[3] << std::endl;
+        std::cout << "dt=" << glb.dt << std::endl;
+        std::cout << "LES model=" << glb.sch[1] << std::endl;
+    }
+    MPI_Bcast(&glb.dt,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(glb.ctr,5,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Bcast(glb.sch,4,MPI_INT,0,MPI_COMM_WORLD);
     computationalElement cc(glb);
-    std::cout << "dt=" << glb.dt << std::endl;
-    std::cout << "LES model=" << glb.sch[1] << std::endl;
 //  input of boundary conditions
-    int nBC;
-    s="./"+caseName+"/input/BC.dat"; std::ifstream inputFileBC(s); chk(inputFileBC,s); // boundary conditions definition input file
+    int nBC; std::string process=std::to_string(w_rank);
+    s="./"+caseName+"/input/BC_pr"+process+".dat"; std::ifstream inputFileBC(s); chk(inputFileBC,s); // boundary conditions definition input file
     inputFileBC >> nBC; nBC++; skipLine(inputFileBC, 1); // reading number of boundary conditions
-    std::cout << "nBC=" << nBC << std::endl;
-    boundaryCondition BC[nBC]; for (int i=1; i<nBC; i++) {std::cout << "BC N." << i << std::endl; BC[i].input(inputFileBC);}   
+    boundaryCondition BC[nBC]; for (int i=1; i<nBC; i++) {BC[i].input(inputFileBC);}   
 //***************************************
 //  input of geometry (points, elements, links and boundary conditions)
-    long nNodes, nCells;
-    s="./"+caseName+"/input/mesh.dat"; std::ifstream inputFileMesh(s); chk(inputFileMesh,s); // mesh input files
-    s="./"+caseName+"/input/link.dat"; std::ifstream inputFileLink(s); chk(inputFileLink,s); // link input files
+    long nNodes, nCells, totCells;
+    s="./"+caseName+"/input/mesh_pr"+process+".dat"; std::ifstream inputFileMesh(s); chk(inputFileMesh,s); // mesh input files
+    s="./"+caseName+"/input/link_pr"+process+".dat"; std::ifstream inputFileLink(s); chk(inputFileLink,s); // link input files
     inputFileMesh >> nNodes >> nCells; // reading number of grid points and number of physical cells
-    std::cout << "nCells=" << nCells << std::endl;
     vector3D* xN=new vector3D[nNodes]; // grid point array    
     physicalElement* e=new physicalElement[nCells]; // physical cells array    
     double volume=readMesh(inputFileMesh,inputFileLink,nNodes,xN,nCells,e,glb,&cc);
     inputFileMesh.close(); inputFileLink.close();
-    std::cout << "volume=" << volume << std::endl;
-// initialization    
-    initialConditions(caseName,nCells,e,glb);
+    double totVolume;
+    MPI_Reduce(&volume, &totVolume, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // initialization    
+    MPI_Reduce(&nCells, &totCells, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD); // initialization    
+    if (w_rank==0) {std::cout << "Volume=" << totVolume << std::endl; std::cout << "Num. of Cells=" << totCells << std::endl;}
+    initialConditions(caseName,nCells,e,glb,w_rank);
     matrix H;
 // start time marching simulation       
-    double residual, maxCFL, eCFL;
     std::ofstream outputFileRes,outputFileHist;
     if (glb.ctr[0]==0)
     {
@@ -92,13 +103,12 @@ int main(int argc, char** argv)
         outputFileHist.open("./"+caseName+"/output/history.dat",std::ios::app);
     }
     outputFileHist << std::setprecision(12);
-    double t_start = omp_get_wtime();
+    double t_start; if (w_rank==0) {t_start=omp_get_wtime();}
     bool dmpR, dmpH=false;
-    if (glb.ctr[0]==0) {printOut(caseName,e,nCells,0,glb);}
+    if (glb.ctr[0]==0) {printOut(caseName,e,nCells,0,glb,w_rank);}
 // start iterations in time
     for (int i=glb.ctr[0]+1; i<(glb.ctr[1]+1); i++)
     {
-        residual=0.; maxCFL=0.;
         for (int ii=0; ii<5; ii++)
         {
            if ((ii==4)&&(i % glb.ctr[3]==0)){dmpR=true;} else {dmpR=false;}
@@ -124,19 +134,25 @@ int main(int argc, char** argv)
         }
         if ((i % glb.ctr[2]==0)||(i==glb.ctr[1]))
         {
-            printOut(caseName,e,nCells,i,glb);
+            printOut(caseName,e,nCells,i,glb,w_rank);
         }
         if (dmpR)
         {
+            double residual=0., totResidual, eCFL, maxCFL=0., maxMaxCFL;
             for (long iC=0; iC<nCells; iC++)
             {
                 residual+=std::abs(e[iC].getResidual());
                 eCFL=e[iC].CFL(glb.dt);
                 if (eCFL>maxCFL) {maxCFL=eCFL;}
             }
-            residual=residual/volume;
-            outputFileRes << i << " " << residual << " " << maxCFL << std::endl;
-            std::cout << "Res.=" << residual << "  CFL=" << maxCFL << std::endl;
+            MPI_Reduce(&residual,&totResidual,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+            MPI_Reduce(&maxCFL,&maxMaxCFL,1,MPI_DOUBLE,MPI_MAX,0,MPI_COMM_WORLD);
+            if (w_rank==0)
+            {
+                totResidual=totResidual/totVolume;
+                outputFileRes << i << " " << totResidual << " " << maxCFL << std::endl;
+                std::cout << "Res.=" << totResidual << "  CFL=" << maxMaxCFL << std::endl;
+            }
             dmpR=false;
         }
         if (i % glb.ctr[4]==0)
@@ -146,18 +162,22 @@ int main(int argc, char** argv)
             {
                H+=e[iC].getHist();
             }
-            H=H/volume;
-            outputFileHist << i*glb.dt;
-            for (int j=0; j<H.nC(); j++)
+            double h[H.nC()], glH[H.nC()];
+            for (int j=0; j<H.nC(); j++) {h[j]=H.get(j);}
+            MPI_Reduce(h,glH,H.nC(),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+            if(w_rank==0)
             {
-                outputFileHist << " " << H.get(j);
+                outputFileHist << i*glb.dt;
+                for (int j=0; j<H.nC(); j++)
+                {
+                    outputFileHist << " " << glH[j]/totVolume;
+                }
+                outputFileHist << std::endl;
             }
-            outputFileHist << std::endl;
         }
     }
     delete[] e; delete[] xN;
-    double t_end = omp_get_wtime();
-    std::cout << "Elapsed time: " << t_end - t_start << " s\n";
+    if (w_rank==0) {double t_end = omp_get_wtime(); std::cout << "Elapsed time: " << t_end - t_start << " s\n";}
     //
     MPI_Finalize();
     return 0;

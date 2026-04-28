@@ -33,7 +33,7 @@ class computationalElement
         int extIndex(int i, int j);
     private:
 // private variable declarations
-        bool src;
+        int src;
         int N, Nm; //element polynomial order, number of modes
         int Npq, Npq2; // number of volume quadrature points, number of face quadrature points
         intMatrix extP;

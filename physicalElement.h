@@ -50,7 +50,7 @@ class physicalElement
         void print();
         void setAM(int i, int eq, double a);
         void setBC(int iS);
-        void setIniCond(std::string caseName, const physics& phy);
+        void setIniCond(std::string caseName);
         void step_0(boundaryCondition BC[]);
         void step_I(std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH);
         void step_II(double dt, int m, physicalElement e[], bool dmpR);
@@ -77,7 +77,8 @@ class physicalElement
         matrix A, KA, A_0, B;
         vector3D n[4];
         computationalElement* cE; // pointer to the computational element
-        physics phy; scheme sch;
+        double Ma, Re, Fr, Pr, gam, gaM2, S;
+        int LES, CIF, src;
 };
 //
 #endif

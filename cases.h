@@ -13,8 +13,8 @@
 #include "LES.h"
 //
 // case distribution functions
-void iniFunc(std::string caseName, int i, vector3D x, matrix* qP, const physics& phy);
-void srcFunc(std::string caseName, matrix* B, matrix* q, const physics& phy);
+void iniFunc(std::string caseName, int i, vector3D x, matrix* qP, double gam, double Ma);
+void srcFunc(std::string caseName, matrix* B, matrix* q, double gam, double Ma, double Re);
 matrix varHist(std::string caseName, computationalElement* cE,double d, double dF, matrix *q, matrix* qA, matrix* q_x, matrix*q_y, matrix* q_z, matrix* qF,
-               const physics& phy, const scheme& sch);
+               double S, double Re, int LES);
 

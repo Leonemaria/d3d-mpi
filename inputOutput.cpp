@@ -1,25 +1,24 @@
 //inputOutput.cpp
 #include "inputOutput.h"
-void initialConditions(std::string caseName, long nCells, physicalElement e[], const global& glb)  // set initial conditions
+void initialConditions(std::string caseName, long nCells, physicalElement e[], const global& glb, int rank)  // set initial conditions
 {
-    if (glb.ctr.startStep==0)
+    if (glb.ctr[0]==0)
     {
         for (long iC=0; iC<nCells; iC++)
         {
-            e[iC].setIniCond(caseName,glb.phy);
+            e[iC].setIniCond(caseName);
         }
     }
     else
     {
-        double aM; std::string st=std::to_string(glb.ctr.startStep);
-        std::string rank=std::to_string(glb.ctr.rank);
-        std::string s="./"+caseName+"/output/result_p"+rank+"_it"+st+".dat"; std::ifstream fin(s); chk(fin,s); 
+        double aM; std::string st=std::to_string(glb.ctr[0]); std::string process=std::to_string(rank);
+        std::string s="./"+caseName+"/output/result_pr"+process+"_it"+st+".dat"; std::ifstream fin(s); chk(fin,s); 
         std::cout << s << std::endl;        
 	skipLine(fin, 1); int Nm;
         for (long iC=0; iC<nCells; iC++)
         {
             skipLine(fin, 1);
-            Nm=nModes(glb.ctr.N);
+            Nm=nModes(glb.sch[0]);
             for (int iM=0; iM<Nm; iM++)
             {
                 for (int eq=0; eq<nEq; eq++)
@@ -34,26 +33,25 @@ void initialConditions(std::string caseName, long nCells, physicalElement e[], c
 }  
 void readPhysics(std::ifstream &fin, global& glb)
 {
-    fin >> glb.phy.Ma; skipLine(fin, 1); // reference Mach Number
-    fin >> glb.phy.Re; skipLine(fin, 1); // reference Reynolds Number
-    fin >> glb.phy.Fr; skipLine(fin, 1); // reference Froude Number
-    fin >> glb.phy.Pr; skipLine(fin, 1); // reference Prandtl Number
-    fin >> glb.phy.gam; skipLine(fin, 1);// specific heats ratio
-    fin >> glb.phy.S; skipLine(fin, 1);  // Sutherland temperature ratio
-    glb.phy.gaM2=glb.phy.gam*sq(glb.phy.Ma);
+    fin >> glb.phy[0]; skipLine(fin, 1); // reference Mach Number
+    fin >> glb.phy[1]; skipLine(fin, 1); // reference Reynolds Number
+    fin >> glb.phy[2]; skipLine(fin, 1); // reference Froude Number
+    fin >> glb.phy[3]; skipLine(fin, 1); // reference Prandtl Number
+    fin >> glb.phy[4]; skipLine(fin, 1);// specific heats ratio
+    fin >> glb.phy[5]; skipLine(fin, 1);  // Sutherland temperature ratio
 }
 void readRun(std::ifstream &fin, global& glb)
 {
-    fin >> glb.ctr.N; skipLine(fin, 1);        // polynomials max order
-    fin >> glb.sch.LES; skipLine(fin, 1);      // kind of LES model
-    fin >> glb.sch.CIF; skipLine(fin, 1);      // kind of convective intercell numerical flux
-    fin >> glb.ctr.startStep; skipLine(fin, 1);// initial number of time steps
-    fin >> glb.ctr.endStep; skipLine(fin, 1);  // final number of time steps
-    fin >> glb.ctr.nStSave; skipLine(fin, 1);  // solution damping period
-    fin >> glb.ctr.nStDRes; skipLine(fin, 1);  // residual damping period
-    fin >> glb.ctr.nStDHist; skipLine(fin, 1); // integrated quantities damping period
+    fin >> glb.sch[0]; skipLine(fin, 1);        // polynomials max order
+    fin >> glb.sch[1]; skipLine(fin, 1);      // kind of LES model
+    fin >> glb.sch[2]; skipLine(fin, 1);      // kind of convective intercell numerical flux
+    fin >> glb.ctr[0]; skipLine(fin, 1);// initial number of time steps
+    fin >> glb.ctr[1]; skipLine(fin, 1);  // final number of time steps
+    fin >> glb.ctr[2]; skipLine(fin, 1);  // solution damping period
+    fin >> glb.ctr[3]; skipLine(fin, 1);  // residual damping period
+    fin >> glb.ctr[4]; skipLine(fin, 1); // integrated quantities damping period
     fin >> glb.dt; skipLine(fin, 1);       // time step
-    fin >> glb.sch.src;                        // source terms flag
+    fin >> glb.sch[3];                        // source terms flag
 
 }
 double readMesh(std::ifstream &fin1, std::ifstream &fin2, long nNodes, vector3D xN[], long nCells, physicalElement e[], const global& glb, computationalElement *cc)
@@ -88,17 +86,17 @@ double readMesh(std::ifstream &fin1, std::ifstream &fin2, long nNodes, vector3D 
     }
     return 4.*V/3.;  
 }
-void printOut(std::string caseName, physicalElement e[], long nCells, int it, const global& glb)
+void printOut(std::string caseName, physicalElement e[], long nCells, int it, const global& glb, int rank)
 {
     void subCellNodes(std::ofstream &fl, int p, int n0, int n1, int n2, int n3);
-    std::string iterations=std::to_string(it); std::string rank=std::to_string(glb.ctr.rank);
-    int Nm=nModes(glb.ctr.N);
-    std::ofstream outputFileSol("./"+caseName+"/output/result_p"+rank+" it"+iterations+".dat");
+    std::string iterations=std::to_string(it); std::string process=std::to_string(rank);
+    int Nm=nModes(glb.sch[0]);
+    std::ofstream outputFileSol("./"+caseName+"/output/result_pr"+process+"_it"+iterations+".dat");
     outputFileSol << std::setprecision(16);
     outputFileSol << nCells*Nm << " " << glb.dt*it << std::endl;
     for (long i=0; i<nCells; i++)
     {
-        outputFileSol << glb.ctr.N << std::endl;
+        outputFileSol << glb.sch[0] << std::endl;
         for (int k=0; k<Nm; k++)
         {
             outputFileSol << e[i].getAM(k,0) << " " << e[i].getAM(k,1) << " " << e[i].getAM(k,2) << " " << e[i].getAM(k,3) << " " << e[i].getAM(k,4) << std::endl;            

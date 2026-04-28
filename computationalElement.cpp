@@ -5,11 +5,10 @@
 computationalElement::computationalElement(const global& glb)
 {
 //
-    src=glb.sch.src;
-    N=glb.ctr.N; Nm=nModes(N); // polynomial order and number of nodal points
+    src=glb.sch[3];
+    N=glb.sch[0]; Nm=nModes(N); // polynomial order and number of nodal points
     int NF=N/2; NF=N;
     int NmF=nModes(NF);
-    if (glb.ctr.rank==0) {std::cout << "N=" << N << std::endl; std::cout << "Nm=" << Nm << std::endl;}
     vector3D vr[4]; // vertices of right-angled tetrahedron
     vr[0].set(-1, -1, -1);
     vr[1].set(1, -1,-1);
@@ -44,10 +43,9 @@ computationalElement::computationalElement(const global& glb)
         iInd[Nm-n-1]=iInd[mM]; jInd[Nm-n-1]=jInd[mM]; kInd[Nm-n-1]=kInd[mM];
         iInd[mM]=iIs; jInd[mM]=jIs; kInd[mM]=kIs;
     }
-    matrix gP=gaussPointsAndWeights3D(glb.ctr.N*2); // reads the points and weights for Gauss volume quadrature of order oq
+    matrix gP=gaussPointsAndWeights3D(N*2); // reads the points and weights for Gauss volume quadrature of order oq
     Npq=gP.nR();
     rq=new vector3D[Npq];
-    if (glb.ctr.rank==0) {std::cout << "Npq=" << Npq << std::endl;}
     for (int i=0; i<Npq; i++)
     {
         rq[i][0]=gP.get(i,0); rq[i][1]=gP.get(i,1); rq[i][2]=gP.get(i,2);
@@ -77,9 +75,8 @@ computationalElement::computationalElement(const global& glb)
     }
     F=PHIF*EF; // filtering matrix for points inside the volume
 //
-    gP=gaussPointsAndWeights2D(glb.ctr.N*2);  // reads the points and weights for Gauss face quadrature of order oq2
+    gP=gaussPointsAndWeights2D(N*2);  // reads the points and weights for Gauss face quadrature of order oq2
     Npq2=gP.nR(); vector3D rq2[Npq2*4];
-    if (glb.ctr.rank==0) {std::cout << "Npq2=" << Npq2 << std::endl;}
     w2D.dim(Npq2*4);
     extP.dim(Npq2,3); double toll=0.00000001;
     double lambda1,lambda2,lambda3; // baricentric coordinates
@@ -164,7 +161,7 @@ matrix computationalElement::wQuad()
 }
 matrix computationalElement::subStep(double d, matrix f[], matrix* fS, matrix* B, vector3D r_x, vector3D r_y, vector3D r_z)
 {  
-    if(src) { return d*((r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f[0]+(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f[1]+(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f[2]-E2*(*fS)+E*(*B));}
+    if(src>0) { return d*((r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f[0]+(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f[1]+(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f[2]-E2*(*fS)+E*(*B));}
     else {return d*((r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f[0]+(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f[1]+(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f[2]-E2*(*fS));}
 }
 void computationalElement::step_I(matrix* A_x, matrix* A_y, matrix* A_z, matrix f, matrix fS[], vector3D r_x, vector3D r_y, vector3D r_z)
