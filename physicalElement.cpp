@@ -243,20 +243,20 @@ void physicalElement::step_0(boundaryCondition BC[])
     {
         if (BS[iS])
         {
-            int kind=BC[join.get(iS,2)].getKind();
+            int kind=BC[join.get(iS,3)].getKind();
             switch (kind)
             {
                 case 21: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014)
                     for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
                     {
-                        for (int eq=0; eq<nAux; eq++) {qAuxS.set(i,eq,BC[join.get(iS,2)].getQ(eq+nEq+1));}
+                        for (int eq=0; eq<nAux; eq++) {qAuxS.set(i,eq,BC[join.get(iS,3)].getQ(eq+nEq+1));}
                     }
                 break;
                 case 22: // weak-Riemann no-slip adiabatic condition (Mengaldo et al. 2014)
                          // for this case the temperature is not set to a specific value (so it is kept as the internal value)
                     for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
                     {
-                        for (int eq=0; eq<nAux-1; eq++) {qAuxS.set(i,eq,BC[join.get(iS,2)].getQ(eq+nEq+1));}
+                        for (int eq=0; eq<nAux-1; eq++) {qAuxS.set(i,eq,BC[join.get(iS,3)].getQ(eq+nEq+1));}
                     }
                 break;
             }
@@ -289,11 +289,11 @@ void physicalElement::step_I(std::string nameCase, physicalElement e[], boundary
         }
         else
         {
-            int eJ=join.get(iS,0); // element connected to iS-th side
+            int eJ=join.get(iS,1); // element connected to iS-th side
             int iExt;
             for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
             {
-                iExt=(*cE).extIndex(i%Npq2,join.get(iS,2))+join.get(iS,1)*Npq2; // i index of the point on the connected element side
+                iExt=(*cE).extIndex(i%Npq2,join.get(iS,3))+join.get(iS,2)*Npq2; // i index of the point on the connected element side
                 qMed.set(0,0,0.5*(qAuxS.row(i)+e[eJ].getQAS(iExt)));
                 if (LES>1) {qMed.set(0,nGrad-1,0.5*(qS.get(i,0)+e[eJ].getQS(iExt,0)));}
                 numFlx[0].set(i,0,JS[iS]*qMed*n[iS][0]);
@@ -332,7 +332,7 @@ void physicalElement::step_I(std::string nameCase, physicalElement e[], boundary
     {
         if (BS[iS])
         {
-            boundaryFluxes(&q_xS,&q_yS,&q_zS,iS,&BC[join.get(iS,2)]);
+            boundaryFluxes(&q_xS,&q_yS,&q_zS,iS,&BC[join.get(iS,3)]);
         }
         else
         {
@@ -360,21 +360,21 @@ void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR)
         }
         else
         {
-            physicalElement* eJ=&e[join.get(iS,0)]; // element connected to iS-th side
+            physicalElement* eJ=&e[join.get(iS,1)]; // element connected to iS-th side
             int iExt;
             switch (CIF)
             {
                 case 0: // Lax-Friedrichs+BR1
                     for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
                     {
-                        iExt=(*cE).extIndex(i%Npq2,join.get(iS,2))+join.get(iS,1)*Npq2; // index of the point on the connected element side
+                        iExt=(*cE).extIndex(i%Npq2,join.get(iS,3))+join.get(iS,2)*Npq2; // index of the point on the connected element side
                         numFlx.set(i,0,JS[iS]*LaxFriedrichs(iS,qS.row(i),(*eJ).getQS(iExt),0.5*(flxS.row(i)-(*eJ).getFlxS(iExt)))); // numerical flux times face Jacobian
                     }
                 break;
                 case 1: // HLL+BR1
                     for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
                     {
-                        iExt=(*cE).extIndex(i%Npq2,join.get(iS,2))+join.get(iS,1)*Npq2; // index of the point on the connected element side
+                        iExt=(*cE).extIndex(i%Npq2,join.get(iS,3))+join.get(iS,2)*Npq2; // index of the point on the connected element side
                         numFlx.set(i,0,JS[iS]*(0.5*(flxS.row(i)-(*eJ).getFlxS(iExt))+HLL(iS,qS.row(i),(*eJ).getQS(iExt)))); //  numerical flux times face Jacobian
                     }
                 break;

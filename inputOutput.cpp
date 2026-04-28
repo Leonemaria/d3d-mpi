@@ -54,7 +54,7 @@ void readRun(std::ifstream &fin, global& glb)
     fin >> glb.sch[3];                        // source terms flag
 
 }
-double readMesh(std::ifstream &fin1, std::ifstream &fin2, long nNodes, vector3D xN[], long nCells, physicalElement e[], const global& glb, computationalElement *cc)
+double readMesh(std::ifstream &fin1, std::ifstream &fin2, long nNodes, vector3D xN[], long nCells, physicalElement e[], const global& glb, computationalElement *cc, int rank)
 {
     double V=0.;
     long iN=-1, iC=-1, iVer[4];
@@ -62,25 +62,27 @@ double readMesh(std::ifstream &fin1, std::ifstream &fin2, long nNodes, vector3D 
     {
         fin1 >> iN >> xN[iN][0] >> xN[iN][1] >> xN[iN][2]; //grid point reading from mesh file (each point is labeled by a sequential number and is defined by three coordinates)
     }
-    intMatrix l(4,3); l.zero();
-    int i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11; //reading link data:
+    intMatrix l(4,4); l.zero();
+    int i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15;
+    //reading link data:
     while (iC<nCells-1) // reading of the cell list (second part of the mesh file) and linkings (link file)
     {
         fin1 >> iC >> iVer[0] >> iVer[1] >> iVer[2] >> iVer[3];    //reading cell data:
         // each raw of cell list has the sequential index of the cell followed by the indices of the points corresponding to its four vertices (in order from vertex 0 to 3)
-        fin2 >> i0 >> i1 >> i2 >> i3 >> i4 >> i5 >> i6 >> i7 >> i8 >> i9 >> i10 >> i11; //reading link data:
+        fin2 >> i0 >> i1 >> i2 >> i3 >> i4 >> i5 >> i6 >> i7 >> i8 >> i9 >> i10 >> i11 >> i12 >> i13 >> i14 >> i15; //reading link data:
         // there are four trios of data, one for each face (from side 0 to 2), where the first data is the index of the linked cell, the second is the index of its linked face
         // and the last is the index of the face vertex linked to the 0 vertex (unless the celle is connected to itself at the same face: in this case the last index is the BC)
-        l.set(0,0,i0); l.set(0,1,i1); l.set(0,2,i2); // setting link matrix
-        l.set(1,0,i3); l.set(1,1,i4); l.set(1,2,i5);
-        l.set(2,0,i6); l.set(2,1,i7); l.set(2,2,i8);
-        l.set(3,0,i9); l.set(3,1,i10); l.set(3,2,i11);
-        // the link matrix is a 4x3 matrix with a row for each cell face where the first element is the indices of the linked cell,
-        // the second one is the indices of the linked side and the third is the index of the point linked to 0 point (or the boundary contition)
+        l.set(0,0,i0); l.set(0,1,i1); l.set(0,2,i2); l.set(0,3,i3); // setting link matrix
+        l.set(1,0,i4); l.set(1,1,i5); l.set(1,2,i6); l.set(1,3,i7); // setting link matrix
+        l.set(2,0,i8); l.set(2,1,i9); l.set(2,2,i10); l.set(2,3,i11); // setting link matrix
+        l.set(3,0,i12); l.set(3,1,i13); l.set(3,2,i14); l.set(3,3,i15); // setting link matrix
+        // the link matrix is a 4x4 matrix with a row for each cell face where the first element is the indices of the connected processor
+        // the second one is the index of the linked cell, the third one is the indices of the linked side
+        // and the fourth is the index of the point linked to 0 point (or the boundary contition)
         e[iC].init(iC,cc,&xN[0],iVer,l,glb); // physical cell initialization
         for (int iS=0; iS<4; iS++)
         {
-            if ((l.get(iS,0)==iC)&(l.get(iS,1)==iS)) {e[iC].setBC(iS);}            
+            if ((l.get(iS,0)==rank)&(l.get(iS,1)==iC)&(l.get(iS,2)==iS)) {e[iC].setBC(iS);}            
         }
         V+=e[iC].Jacobian();
     }
