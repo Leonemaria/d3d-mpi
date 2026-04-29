@@ -76,7 +76,7 @@ int main(int argc, char** argv)
     boundaryCondition BC[nBC]; for (int i=1; i<nBC; i++) {BC[i].input(inputFileBC);}   
 //***************************************
 //  input of geometry (points, elements, links and boundary conditions)
-    long nNodes, nCells, totCells;
+    long nNodes, nCells, totCells=0;
     s="./"+caseName+"/input/mesh_pr"+process+".dat"; std::ifstream inputFileMesh(s); chk(inputFileMesh,s); // mesh input files
     s="./"+caseName+"/input/link_pr"+process+".dat"; std::ifstream inputFileLink(s); chk(inputFileLink,s); // link input files
     inputFileMesh >> nNodes >> nCells; // reading number of grid points and number of physical cells
@@ -84,7 +84,7 @@ int main(int argc, char** argv)
     physicalElement* e=new physicalElement[nCells]; // physical cells array    
     double volume=readMesh(inputFileMesh,inputFileLink,nNodes,xN,nCells,e,glb,&cc,w_rank);
     inputFileMesh.close(); inputFileLink.close();
-    double totVolume;
+    double totVolume=0.;
     MPI_Reduce(&volume, &totVolume, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // initialization    
     MPI_Reduce(&nCells, &totCells, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD); // initialization    
     if (w_rank==0) {std::cout << "Volume=" << totVolume << std::endl; std::cout << "Num. of Cells=" << totCells << std::endl;}
@@ -162,7 +162,7 @@ int main(int argc, char** argv)
             {
                H+=e[iC].getHist();
             }
-            double h[H.nC()], glH[H.nC()];
+            double h[H.nC()], glH[H.nC()]={0.};
             for (int j=0; j<H.nC(); j++) {h[j]=H.get(j);}
             MPI_Reduce(h,glH,H.nC(),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
             if(w_rank==0)
