@@ -33,8 +33,6 @@ int main(int argc, char** argv)
     if (w_rank==0)
     {
         s="./ambient.dat"; std::ifstream ambientFile(s); chk(ambientFile,s); // ambient data
-        ambientFile >> Nth; skipLine(ambientFile, 1); //reading the number of threads
-        std::cout << "N threads=" << Nth << std::endl;
         ambientFile >> caseName; //reading the case name
         nameSize=caseName.size();
         ambientFile.close();
