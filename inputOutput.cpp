@@ -70,8 +70,9 @@ double readMesh(std::ifstream &fin1, std::ifstream &fin2, long nNodes, vector3D 
         fin1 >> iC >> iVer[0] >> iVer[1] >> iVer[2] >> iVer[3];    //reading cell data:
         // each raw of cell list has the sequential index of the cell followed by the indices of the points corresponding to its four vertices (in order from vertex 0 to 3)
         fin2 >> i0 >> i1 >> i2 >> i3 >> i4 >> i5 >> i6 >> i7 >> i8 >> i9 >> i10 >> i11 >> i12 >> i13 >> i14 >> i15; //reading link data:
-        // there are four trios of data, one for each face (from side 0 to 2), where the first data is the index of the linked cell, the second is the index of its linked face
-        // and the last is the index of the face vertex linked to the 0 vertex (unless the celle is connected to itself at the same face: in this case the last index is the BC)
+        // there are four foursomes of data, one for each face (from face 0 to 3), where the first data is the rank of the linked process,
+		// the second data is the index of the linked cell, the third is the index of its linked face, and the last one is the index of the face vertex linked to the 0 vertex
+		// (unless the celle is connected to itself at the same face: in this case the last index is the BC)
         l.set(0,0,i0); l.set(0,1,i1); l.set(0,2,i2); l.set(0,3,i3); // setting link matrix
         l.set(1,0,i4); l.set(1,1,i5); l.set(1,2,i6); l.set(1,3,i7); // setting link matrix
         l.set(2,0,i8); l.set(2,1,i9); l.set(2,2,i10); l.set(2,3,i11); // setting link matrix
