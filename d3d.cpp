@@ -39,7 +39,6 @@ int main(int argc, char** argv)
         std::cout << "Running case: " << caseName << std::endl;
     }
     MPI_Bcast(&Nth,1,MPI_INT,0,MPI_COMM_WORLD);
-    omp_set_num_threads(Nth);
     MPI_Bcast(&nameSize,1,MPI_INT,0,MPI_COMM_WORLD);
     caseName.resize(nameSize);
     MPI_Bcast(&caseName[0],nameSize,MPI_CHAR,0,MPI_COMM_WORLD);
