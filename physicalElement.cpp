@@ -128,6 +128,10 @@ matrix physicalElement::getHist()
 {
     return H;
 }
+intMatrix physicalElement::getJoin()
+{
+    return join;
+}
 double physicalElement::getQAS(int i, int eq)
 {
     return qAuxS.get(i,eq);
@@ -226,6 +230,10 @@ void physicalElement::setIniCond(std::string caseName)
         iniFunc(caseName,iP,xP,&qq,gam,Ma);
     }
     A=(*cE).getE()*qq;
+}
+void physicalElement::setJoin(int i, int j, int k)
+{
+    join.set(i,j,k);
 }
 void physicalElement::step_0(boundaryCondition BC[])
 // computes conservative and auxiliary (primitive) variables on side quadrature points

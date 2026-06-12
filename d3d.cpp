@@ -6,6 +6,7 @@
 #include <stdio.h> 
 #include <cstdlib> 
 #include <cmath>
+#include <vector>
 #include "matrix.h"
 #include "computationalElement.h"
 #include "physicalElement.h"
@@ -85,6 +86,53 @@ int main(int argc, char** argv)
     MPI_Reduce(&volume, &totVolume, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // initialization    
     MPI_Reduce(&nCells, &totCells, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD); // initialization    
     if (w_rank==0) {std::cout << "Volume=" << totVolume << std::endl; std::cout << "Num. of Cells=" << totCells << std::endl;}
+// preparation for mpi messaging
+    int nJnPr=0; // number of joined processes
+    std::vector<int>jnPr; // contains the ranks of connected processes
+    std::vector<int> nJC; // contains the number of joined cells for any joined process
+    std::vector<std::vector<int>> jnCells; // contains the nJnPr vectors containing the indices of the joined cells
+    bool newJ; intMatrix jn; int nJnGr=0;
+    for (long iC=0; iC<nCells; iC++)
+    {
+        jn=e[iC].getJoin();
+        for (int iS=0; iS<4; iS++)
+        {
+            if (jn.get(iS,0)!=w_rank)
+            {
+                newJ=true;           
+                for (int i=0; i<nJnPr; i++)
+                {
+                    if (jnPr[i]==jn.get(iS,0))
+                    {
+                        newJ=false; nJC[i]++;
+                        jnCells[i].push_back(jn.get(iS,1));
+//                        if (w_rank<jnPr[i]) {e[iC].setJoin(iS,1,jnCells[i].size()-1);}                        
+                    }
+                }
+                if (newJ)
+                {
+                    nJnPr++; jnPr.push_back(jn.get(iS,0));
+                    nJC.push_back(1);
+                    jnCells.push_back({jn.get(iS,1)});
+//                    if (w_rank<jn.get(iS,0)) {e[iC].setJoin(iS,1,0);} 
+                }
+            }
+        }
+    }
+    std::vector <MPI_Request> rqs(nJnPr);
+    for (int i=0; i<nJnPr; i++)
+    {
+        if (w_rank<i)
+        {
+            MPI_Isend(jnCells[i].data(),jnCells[i].size(),MPI_INT,i,1,MPI_COMM_WORLD,&rqs[i]);
+        }
+        else
+        {
+            MPI_Irecv(jnCells[i].data(),jnCells[i].size(),MPI_INT,i,1,MPI_COMM_WORLD,&rqs[i]);
+        }        
+    }
+    MPI_Waitall(nJnPr,rqs.data(),MPI_STATUSES_IGNORE);   
+//
     initialConditions(caseName,nCells,e,glb,w_rank);
     matrix H;
 // start time marching simulation       

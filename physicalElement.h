@@ -33,6 +33,7 @@ class physicalElement
         void convFluxes(int iS);
         double getAM(int i, int eq);
         matrix getHist();
+        intMatrix getJoin();
         double getQAS(int i, int eq);
         matrix getQAS(int i);
         double getQP(int i, int eq);
@@ -51,6 +52,7 @@ class physicalElement
         void setAM(int i, int eq, double a);
         void setBC(int iS);
         void setIniCond(std::string caseName);
+        void setJoin(int i, int j, int k);
         void step_0(boundaryCondition BC[]);
         void step_I(std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH);
         void step_II(double dt, int m, physicalElement e[], bool dmpR);
