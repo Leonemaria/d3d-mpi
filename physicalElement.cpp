@@ -208,6 +208,10 @@ matrix physicalElement::LaxFriedrichs(int iS, matrix qInt, matrix qExt, matrix f
     double C=std::max(abs(UnInt)+cInt, abs(UnExt)+cExt)/2.;
     return fMean+C*(qInt-qExt);
 }
+int physicalElement::nQuadPoints()
+{
+    return Npq2;
+}
 int physicalElement::ord()
 {
     return N;

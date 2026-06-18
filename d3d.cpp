@@ -90,10 +90,14 @@ int main(int argc, char** argv)
     int nJnPr=0; // number of joined processes
     std::vector<int>jnPr; // contains the ranks of connected processes
     std::vector<std::vector<int>> jnFaces; // contains the nJnPr vectors containing the indices of the joined cells and faces
+    std::vector<std::vector<double>> toBeSnd; // vectors of the data to be sended
+    std::vector<std::vector<double>> toBeRcv; // vectors of the data to be received
     bool newJ; intMatrix jn;
+    int Npq2;
     for (long iC=0; iC<nCells; iC++)
     {
         jn=e[iC].getJoin();
+        Npq2=e[iC].nQuadPoints();
         for (int iS=0; iS<4; iS++)
         {
             if (jn.get(iS,0)!=w_rank)
@@ -106,12 +110,20 @@ int main(int argc, char** argv)
                         newJ=false;
                         jnFaces[i].push_back(jn.get(iS,1));
                         jnFaces[i].push_back(jn.get(iS,2));
+                        for (int id=0; id<14*Npq2*4; id++)
+                        {
+                            toBeSnd[i].push_back(0.);
+                            toBeRcv[i].push_back(0.);
+                        }
 //                        if (w_rank<jnPr[i]) {e[iC].setJoin(iS,1,jnFaces[i].size()-1);}                        
                     }
                 }
                 if (newJ)
                 {
+                    std::vector<double> nullData(14*Npq2*4,0.);
                     nJnPr++; jnPr.push_back(jn.get(iS,0));
+                    toBeSnd.push_back(nullData);
+                    toBeRcv.push_back(nullData);
                     jnFaces.push_back({jn.get(iS,1)});
                     jnFaces[nJnPr-1].push_back(jn.get(iS,2));
 //                    if (w_rank<jn.get(iS,0)) {e[iC].setJoin(iS,1,0);} 
@@ -119,7 +131,6 @@ int main(int argc, char** argv)
             }
         }
     }
-    std::cout << "my rank=" << w_rank << " NjnFaces=" << jnFaces[0].size() << std::endl;
     std::vector <MPI_Request> rqs(nJnPr);
     for (int i=0; i<nJnPr; i++)
     {
@@ -132,7 +143,7 @@ int main(int argc, char** argv)
             MPI_Irecv(jnFaces[i].data(),jnFaces[i].size(),MPI_INT,jnPr[i],1,MPI_COMM_WORLD,&rqs[i]);
         }        
     }
-    MPI_Waitall(nJnPr,rqs.data(),MPI_STATUSES_IGNORE);   
+    MPI_Waitall(nJnPr,rqs.data(),MPI_STATUSES_IGNORE);
 //
     initialConditions(caseName,nCells,e,glb,w_rank);
     matrix H;
