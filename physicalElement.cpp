@@ -239,7 +239,8 @@ void physicalElement::setJoin(int i, int j, int k)
 {
     join.set(i,j,k);
 }
-void physicalElement::step_0(boundaryCondition BC[])
+void physicalElement::step_0(boundaryCondition BC[], int myRank, std::vector<std::vector<double>> *toBeSnd)
+//void physicalElement::step_0(boundaryCondition BC[])
 // computes conservative and auxiliary (primitive) variables on side quadrature points
 // the conservative variables are stored in the matrix qS while the auxiliary variables are stored in the matrix qAuxS
 {
@@ -273,7 +274,22 @@ void physicalElement::step_0(boundaryCondition BC[])
                 break;
             }
         }
-    }
+        else        
+        {
+            if (join.get(iS,0)!=myRank)
+            {
+                int jPr=join.get(iS,1);
+                int jFc=join.get(iS,2);
+                for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+                {
+                    for (int eq=0; eq<nAux; eq++)
+                    {
+                        (*toBeSnd)[jPr][jFc*14]=qAuxS.get(i,eq);
+                    }
+                }
+            }        
+       }
+   }
 }
 void physicalElement::step_I(std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH)
 // computes the auxiliary variable gradients and physical fluxes on internal and side quadrature points

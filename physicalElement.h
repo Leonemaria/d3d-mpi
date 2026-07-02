@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
+#include <vector>
 #include "constants.h"
 #include "matrix.h"
 #include "tensor.h"
@@ -54,7 +55,8 @@ class physicalElement
         void setBC(int iS);
         void setIniCond(std::string caseName);
         void setJoin(int i, int j, int k);
-        void step_0(boundaryCondition BC[]);
+//        void step_0(boundaryCondition BC[]);
+        void step_0(boundaryCondition BC[], int myRank, std::vector<std::vector<double>> *toBeSnd);
         void step_I(std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH);
         void step_II(double dt, int m, physicalElement e[], bool dmpR);
         void viscousFlux(matrix vF[], double u, double v, double w, symTensor tau, vector3D heat);
