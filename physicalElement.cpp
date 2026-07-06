@@ -239,7 +239,7 @@ void physicalElement::setJoin(int i, int j, int k)
 {
     join.set(i,j,k);
 }
-void physicalElement::step_0(boundaryCondition BC[], int myRank, std::vector<std::vector<double>> *toBeSnd)
+void physicalElement::step_0(boundaryCondition BC[], int myRank, std::vector<std::vector<double>> *qToBeSnd)
 //void physicalElement::step_0(boundaryCondition BC[])
 // computes conservative and auxiliary (primitive) variables on side quadrature points
 // the conservative variables are stored in the matrix qS while the auxiliary variables are stored in the matrix qAuxS
@@ -282,25 +282,22 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, std::vector<std
                 int jFc=join.get(iS,2);
                 for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
                 {
-                    for (int eq=0; eq<nAux; eq++)
-                    {
-                        (*toBeSnd)[jPr][jFc*14]=qAuxS.get(i,eq);
-                    }
+                    rSTDMatr(qToBeSnd,qS.row(i),jPr,jFc*9);                    
+                    rSTDMatr(qToBeSnd,qAuxS.row(i),jPr,jFc*9+5);                    
                 }
             }        
        }
    }
 }
-void physicalElement::step_I(std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH)
+void physicalElement::step_I(std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH, int myRank,
+     std::vector<std::vector<double>> *qToBeRcv, std::vector<std::vector<double>> *fToBeSnd)
 // computes the auxiliary variable gradients and physical fluxes on internal and side quadrature points
 // the internal fluxes (convective-viscous) are stored in the matrix array fluxq[3]: the i-th matrix contains the i-th component of fluxes
 // the side fluxes are stored
 {
-    int nGrad=nAux;
-    if (LES>1) {nGrad++;}
-    matrix qMed(1,nGrad);
+    matrix qMed(1,nAux);
     double rho, rhoU, rhoV, rhoW, E, p;
-    matrix numFlx[3]; numFlx[0].dim(4*Npq2,nGrad); numFlx[1].dim(4*Npq2,nGrad); numFlx[2].dim(4*Npq2,nGrad);
+    matrix numFlx[3]; numFlx[0].dim(4*Npq2,nAux); numFlx[1].dim(4*Npq2,nAux); numFlx[2].dim(4*Npq2,nAux);
     flxS.zero();
     for (int iS=0; iS<4; iS++)
     {
@@ -308,8 +305,7 @@ void physicalElement::step_I(std::string nameCase, physicalElement e[], boundary
         {
             for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
             {
-                qMed.set(0,0,qAuxS.row(i)); // No condition                       
-                if (LES>1) {qMed.set(0,nGrad-1,qS.get(i,0));}
+                qMed.set(0,0,qAuxS.row(i));                    
                 numFlx[0].set(i,0,JS[iS]*qMed*n[iS][0]);
                 numFlx[1].set(i,0,JS[iS]*qMed*n[iS][1]);
                 numFlx[2].set(i,0,JS[iS]*qMed*n[iS][2]);
@@ -317,28 +313,41 @@ void physicalElement::step_I(std::string nameCase, physicalElement e[], boundary
         }
         else
         {
-            int eJ=join.get(iS,1); // element connected to iS-th side
-            int iExt;
-            for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+            if (join.get(iS,0)==myRank)
             {
-                iExt=(*cE).extIndex(i%Npq2,join.get(iS,3))+join.get(iS,2)*Npq2; // i index of the point on the connected element side
-                qMed.set(0,0,0.5*(qAuxS.row(i)+e[eJ].getQAS(iExt)));
-                if (LES>1) {qMed.set(0,nGrad-1,0.5*(qS.get(i,0)+e[eJ].getQS(iExt,0)));}
-                numFlx[0].set(i,0,JS[iS]*qMed*n[iS][0]);
-                numFlx[1].set(i,0,JS[iS]*qMed*n[iS][1]);
-                numFlx[2].set(i,0,JS[iS]*qMed*n[iS][2]);
+                int eJ=join.get(iS,1); // element connected to iS-th side
+                int iExt;
+                for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+                {
+                    iExt=(*cE).extIndex(i%Npq2,join.get(iS,3))+join.get(iS,2)*Npq2; // i index of the point on the connected element side
+                    qMed.set(0,0,0.5*(qAuxS.row(i)+e[eJ].getQAS(iExt)));
+                    numFlx[0].set(i,0,JS[iS]*qMed*n[iS][0]);
+                    numFlx[1].set(i,0,JS[iS]*qMed*n[iS][1]);
+                    numFlx[2].set(i,0,JS[iS]*qMed*n[iS][2]);
+                }
+            }
+            else
+            {
+                int jPr=join.get(iS,1);
+                int jFc=join.get(iS,2);
+                for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+                {
+                    qMed=0.5*(qAuxS.row(i)+rSTDMatr(qToBeRcv,jPr,jFc*9+5+i,4));
+                    numFlx[0].set(i,0,JS[iS]*qMed*n[iS][0]);
+                    numFlx[1].set(i,0,JS[iS]*qMed*n[iS][1]);
+                    numFlx[2].set(i,0,JS[iS]*qMed*n[iS][2]);
+                }
             }
         }
     }
     matrix qq=(*cE).getPHI()*A;
-    matrix qqAux(Npq,nGrad);
+    matrix qqAux(Npq,nAux);
     for (int i=0; i<Npq; i++)
     {
      // computes the auxiliary variables on volume quadrature points
         rho=qq.get(i,0); rhoU=qq.get(i,1); rhoV=qq.get(i,2); rhoW=qq.get(i,3);
         E=qq.get(i,4); p=pressure(rho,rhoU,rhoV,rhoW,E,gam,Ma);
         qqAux.set(i,0,rhoU/rho); qqAux.set(i,1,rhoV/rho); qqAux.set(i,2,rhoW/rho); qqAux.set(i,3,p/rho); // auxiliary variables
-        if (LES>1) {qqAux.set(i,4,rho);}
     }
     // computes the auxiliary variable gradients
     matrix A_x, A_y, A_z;
@@ -368,13 +377,27 @@ void physicalElement::step_I(std::string nameCase, physicalElement e[], boundary
             if (CIF==0) {convFluxes(iS);}  // add convective flux on side quadrature points
         }
     }
+    for (int iS=0; iS<4; iS++)
+    {
+        if (join.get(iS,0)!=myRank)
+        {
+            int jPr=join.get(iS,1);
+            int jFc=join.get(iS,2);
+            for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+            {
+                rSTDMatr(fToBeSnd,flxS.row(i),jPr,jFc*9);     
+            }
+        }
+    }
     //
     // compute the convective part of physical fluxes on quadrature points
     convFluxes(&qq); // add convective flux on volume quadrature points
+    
     if (src>0) {srcFunc(nameCase,&B,&qq,gam,Ma,Re);}   
  
 }
-void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR)
+void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, int myRank,
+             std::vector<std::vector<double>> *qToBeRcv, std::vector<std::vector<double>> *fToBeRcv)
 {
     matrix numFlx(4*Npq2,nEq);
     for (int iS=0; iS<4; iS++)
@@ -388,24 +411,35 @@ void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR)
         }
         else
         {
-            physicalElement* eJ=&e[join.get(iS,1)]; // element connected to iS-th side
-            int iExt;
-            switch (CIF)
+            if (join.get(iS,0)==myRank)
             {
-                case 0: // Lax-Friedrichs+BR1
-                    for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
-                    {
-                        iExt=(*cE).extIndex(i%Npq2,join.get(iS,3))+join.get(iS,2)*Npq2; // index of the point on the connected element side
-                        numFlx.set(i,0,JS[iS]*LaxFriedrichs(iS,qS.row(i),(*eJ).getQS(iExt),0.5*(flxS.row(i)-(*eJ).getFlxS(iExt)))); // numerical flux times face Jacobian
-                    }
-                break;
-                case 1: // HLL+BR1
-                    for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
-                    {
-                        iExt=(*cE).extIndex(i%Npq2,join.get(iS,3))+join.get(iS,2)*Npq2; // index of the point on the connected element side
-                        numFlx.set(i,0,JS[iS]*(0.5*(flxS.row(i)-(*eJ).getFlxS(iExt))+HLL(iS,qS.row(i),(*eJ).getQS(iExt)))); //  numerical flux times face Jacobian
-                    }
-                break;
+                physicalElement* eJ=&e[join.get(iS,1)]; // element connected to iS-th side
+                int iExt;
+                switch (CIF)
+                {
+                    case 0: // Lax-Friedrichs+BR1
+                        for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+                        {
+                            iExt=(*cE).extIndex(i%Npq2,join.get(iS,3))+join.get(iS,2)*Npq2; // index of the point on the connected element side
+                            numFlx.set(i,0,JS[iS]*LaxFriedrichs(iS,qS.row(i),(*eJ).getQS(iExt),0.5*(flxS.row(i)-(*eJ).getFlxS(iExt)))); // numerical flux times face Jacobian
+                         }
+                    break;
+                    case 1: // HLL+BR1
+                        for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+                        {
+                            iExt=(*cE).extIndex(i%Npq2,join.get(iS,3))+join.get(iS,2)*Npq2; // index of the point on the connected element side
+                            numFlx.set(i,0,JS[iS]*(0.5*(flxS.row(i)-(*eJ).getFlxS(iExt))+HLL(iS,qS.row(i),(*eJ).getQS(iExt)))); //  numerical flux times face Jacobian
+                        }
+                    break;
+                }
+            }
+            else
+            {
+                int jPr=join.get(iS,1);
+                int jFc=join.get(iS,2);
+                for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+                {
+                }
             }
         }
     }
@@ -691,4 +725,19 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
         break;
     }
 }
-
+matrix rSTDMatr(std::vector<std::vector<double>> *stdM, int jPr, int i, int l)
+{
+    matrix r; r.dim(l);
+    for (int j=0; j<l; j++)
+    {
+        r.set(j,(*stdM)[jPr][i+j]);
+    }
+    return r;
+}
+void rSTDMatr(std::vector<std::vector<double>> *stdM, matrix r, int jPr, int i)
+{
+    for (int j=0; j<r.size(); j++)
+    {
+        (*stdM)[jPr][i+j]=r.get(j);
+    }
+}

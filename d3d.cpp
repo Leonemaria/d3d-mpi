@@ -90,8 +90,10 @@ int main(int argc, char** argv)
     int nJnPr=0; // number of joined processes
     std::vector<int>jnPr; // contains the ranks of connected processes
     std::vector<std::vector<int>> jnFaces; // contains the nJnPr vectors containing the indices of the joined cells and faces
-    std::vector<std::vector<double>> toBeSnd; // vectors of the data to be sended
-    std::vector<std::vector<double>> toBeRcv; // vectors of the data to be received
+    std::vector<std::vector<double>> qToBeSnd; // vectors of the data to be sended
+    std::vector<std::vector<double>> qToBeRcv; // vectors of the data to be received
+    std::vector<std::vector<double>> fToBeSnd; // vectors of the data to be sended
+    std::vector<std::vector<double>> fToBeRcv; // vectors of the data to be received
     bool newJ; intMatrix jn;
     int Npq2;
     for (long iC=0; iC<nCells; iC++)
@@ -110,10 +112,15 @@ int main(int argc, char** argv)
                         newJ=false;
                         jnFaces[i].push_back(jn.get(iS,1)); // adds the index of the joined cell to the linking data vector of the corresponding process
                         jnFaces[i].push_back(jn.get(iS,2)); // adds the index of the joined face to the linking data vector of the corresponding process
-                        for (int id=0; id<14*Npq2*4; id++)
+                        for (int id=0; id<9*Npq2; id++)
                         {
-                            toBeSnd[i].push_back(0.); // allocates space in the corresponding sending data vector
-                            toBeRcv[i].push_back(0.); // allocates space in the corresponding receiving data vector
+                            qToBeSnd[i].push_back(0.); // allocates space in the corresponding sending variables vector
+                            qToBeRcv[i].push_back(0.); // allocates space in the corresponding receiving variables vector
+                        }
+                        for (int id=0; id<5*Npq2; id++)
+                        {
+                            fToBeSnd[i].push_back(0.); // allocates space in the corresponding sending fluxes vector
+                            fToBeRcv[i].push_back(0.); // allocates space in the corresponding receiving fluxes vector
                         }
                         // if the present process rank is lower than the joined one, the second element in the face join vector (the one that normally indicates
                         // the joined cell) is substituted with the index of the joined process in jnPr vector, while the third element is substituted with the
@@ -124,10 +131,13 @@ int main(int argc, char** argv)
                 }
                 if (newJ) // if the joined process was not in the list of joined processes
                 {
-                    std::vector<double> nullData(14*Npq2*4,0.); // creates a vector of zero to initialize the new sending and receiving data vectors
+                    std::vector<double> qNullData(9*Npq2,0.); // creates a vector of zero to initialize the new sending and receiving data vectors
+                    std::vector<double> fNullData(5*Npq2,0.); // creates a vector of zero to initialize the new sending and receiving data vectors
                     nJnPr++; jnPr.push_back(jn.get(iS,0));
-                    toBeSnd.push_back(nullData);
-                    toBeRcv.push_back(nullData);
+                    qToBeSnd.push_back(qNullData);
+                    qToBeRcv.push_back(qNullData);
+                    fToBeSnd.push_back(fNullData);
+                    fToBeRcv.push_back(fNullData);
                     jnFaces.push_back({jn.get(iS,1),jn.get(iS,2)}); // adds a new linking indices vector with the indices of the joined cell and face
                     if (myRank<jn.get(iS,0)) {e[iC].setJoin(iS,1,nJnPr-1);} 
                     if (myRank<jn.get(iS,0)) {e[iC].setJoin(iS,2,0);} 
@@ -136,6 +146,7 @@ int main(int argc, char** argv)
         }
     }
     std::vector <MPI_Request> rqs(nJnPr);
+    std::vector <MPI_Request> rqs2(2*nJnPr);
     for (int i=0; i<nJnPr; i++) // exchange the linking data between the processes
     {
         if (myRank<jnPr[i]) // if the present process rank is lower than the joined one
@@ -184,20 +195,36 @@ int main(int argc, char** argv)
 #pragma omp parallel for schedule(static)
             for (long iC=0; iC<nCells; iC++)
             {
-                e[iC].step_0(BC,myRank,&toBeSnd); // computes conservative and auxiliary (primitive) variables on side quadrature points
+                e[iC].step_0(BC,myRank,&qToBeSnd); // computes conservative and auxiliary (primitive) variables on side quadrature points
 //                e[iC].step_0(BC); // computes conservative and auxiliary (primitive) variables on side quadrature points
             }
 // computes (far all elements) the auxiliary variables gradients and physical fluxes
+
+    for (int i=0; i<nJnPr; i++) // exchange the data between the processes
+    {
+        MPI_Isend(qToBeSnd[i].data(),qToBeSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs2[i]); // the linking indices are sent
+        MPI_Irecv(qToBeRcv[i].data(),qToBeRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs2[i]); // the linking indices are received
+    }
+    MPI_Waitall(nJnPr,rqs2.data(),MPI_STATUSES_IGNORE);    
+
 #pragma omp parallel for schedule(static)
             for (long iC=0; iC<nCells; iC++)
             {
-                e[iC].step_I(caseName,e,BC,&dmpH); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
+                e[iC].step_I(caseName,e,BC,&dmpH,myRank,&qToBeRcv,&fToBeSnd); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
             }
 // computes numerical fluxes and advances the solution
+
+    for (int i=0; i<nJnPr; i++) // exchange the data between the processes
+    {
+        MPI_Isend(fToBeSnd[i].data(),fToBeSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs2[i]); // the linking indices are sent
+        MPI_Irecv(fToBeRcv[i].data(),fToBeRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs2[i]); // the linking indices are received
+    }
+    MPI_Waitall(nJnPr,rqs2.data(),MPI_STATUSES_IGNORE);    
+
 #pragma omp parallel for schedule(static)
             for (long iC=0; iC<nCells; iC++)
             {
-                {e[iC].step_II(glb.dt,ii,e,dmpR);}
+                e[iC].step_II(glb.dt,ii,e,dmpR,myRank,&qToBeRcv,&fToBeRcv);
             }
         }
         if ((i % glb.ctr[2]==0)||(i==glb.ctr[1]))
