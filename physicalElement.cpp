@@ -252,6 +252,7 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, std::vector<std
         qAuxS.set(i,0,qS.get(i,1)/rho); qAuxS.set(i,1,qS.get(i,2)/rho); qAuxS.set(i,2,qS.get(i,3)/rho); // set the side values (in i-th quadrature point) of the three first auxiliary variables (u, v and w) in qAuxS matrix
         qAuxS.set(i,3,pressure(qS.row(i),gam,Ma)/rho); // set the side values (in i-th quadrature point) of the fourth auxiliary variables (T) in qAuxS matrix
     }
+//    if (myRank==1&mySelf==4) {qAuxS.row(Npq2).print();}
     for (int iS=0; iS<4; iS++)
     {
         if (BS[iS])
@@ -280,10 +281,10 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, std::vector<std
             {
                 int jPr=join.get(iS,1);
                 int jFc=join.get(iS,2);
-                for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+                for (int i=0; i<Npq2; i++)
                 {
-                    rSTDMatr(qToBeSnd,qS.row(i),jPr,jFc*9);                    
-                    rSTDMatr(qToBeSnd,qAuxS.row(i),jPr,jFc*9+5);                    
+                    rSTDMatr(qToBeSnd,qS.row(iS*Npq2+i),jPr,(jFc*Npq2+i)*9);                    
+                    rSTDMatr(qToBeSnd,qAuxS.row(iS*Npq2+i),jPr,(jFc*Npq2+i)*9+5);
                 }
             }        
        }
@@ -330,12 +331,14 @@ void physicalElement::step_I(std::string nameCase, physicalElement e[], boundary
             {
                 int jPr=join.get(iS,1);
                 int jFc=join.get(iS,2);
-                for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+                int iExt;
+                for (int i=0; i<Npq2; i++)
                 {
-                    qMed=0.5*(qAuxS.row(i)+rSTDMatr(qToBeRcv,jPr,jFc*9+5+i,4));
-                    numFlx[0].set(i,0,JS[iS]*qMed*n[iS][0]);
-                    numFlx[1].set(i,0,JS[iS]*qMed*n[iS][1]);
-                    numFlx[2].set(i,0,JS[iS]*qMed*n[iS][2]);
+                    iExt=(*cE).extIndex(i%Npq2,join.get(iS,3)); // i index of the point on the connected element side
+                    qMed=0.5*(qAuxS.row(iS*Npq2+i)+rSTDMatr(qToBeRcv,jPr,(jFc*Npq2+iExt)*9+5,4));
+                    numFlx[0].set(iS*Npq2+i,0,JS[iS]*qMed*n[iS][0]);
+                    numFlx[1].set(iS*Npq2+i,0,JS[iS]*qMed*n[iS][1]);
+                    numFlx[2].set(iS*Npq2+i,0,JS[iS]*qMed*n[iS][2]);
                 }
             }
         }
@@ -383,9 +386,9 @@ void physicalElement::step_I(std::string nameCase, physicalElement e[], boundary
         {
             int jPr=join.get(iS,1);
             int jFc=join.get(iS,2);
-            for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+            for (int i=0; i<Npq2; i++)
             {
-                rSTDMatr(fToBeSnd,flxS.row(i),jPr,jFc*9);     
+                rSTDMatr(fToBeSnd,flxS.row(iS*Npq2+i),jPr,(jFc*Npq2+i)*5);     
             }
         }
     }
@@ -437,8 +440,24 @@ void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, 
             {
                 int jPr=join.get(iS,1);
                 int jFc=join.get(iS,2);
-                for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+                int iExt;
+                switch (CIF)
                 {
+                    case 0: // Lax-Friedrichs+BR1
+                        for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+                        {
+                            iExt=(*cE).extIndex(i%Npq2,join.get(iS,3)); // index of the point on the connected element side
+                            numFlx.set(i,0,JS[iS]*LaxFriedrichs(iS,qS.row(i),rSTDMatr(qToBeRcv,jPr,(jFc*Npq2+iExt)*9,5),
+                                      0.5*(flxS.row(i)-rSTDMatr(fToBeRcv,jPr,(jFc*Npq2+iExt)*5,5)))); // numerical flux times face Jacobian
+                        }
+                    break;
+                    case 1: // HLL+BR1
+                        for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+                        {
+                            iExt=(*cE).extIndex(i%Npq2,join.get(iS,3)); // index of the point on the connected element side
+                            numFlx.set(i,0,JS[iS]*(0.5*(flxS.row(i)-rSTDMatr(fToBeRcv,jPr,(jFc*Npq2+iExt)*5,5))+HLL(iS,qS.row(i),rSTDMatr(qToBeRcv,jPr,(jFc*Npq2+iExt)*9,5)))); //  numerical flux times face Jacobian
+                        }
+                    break;
                 }
             }
         }

@@ -86,6 +86,7 @@ int main(int argc, char** argv)
     MPI_Reduce(&volume, &totVolume, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // initialization    
     MPI_Reduce(&nCells, &totCells, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD); // initialization    
     if (myRank==0) {std::cout << "Volume=" << totVolume << std::endl; std::cout << "Num. of Cells=" << totCells << std::endl;}
+    MPI_Barrier(MPI_COMM_WORLD);   
 // preparation for mpi messaging
     int nJnPr=0; // number of joined processes
     std::vector<int>jnPr; // contains the ranks of connected processes
@@ -93,7 +94,7 @@ int main(int argc, char** argv)
     std::vector<std::vector<double>> qToBeSnd; // vectors of the data to be sended
     std::vector<std::vector<double>> qToBeRcv; // vectors of the data to be received
     std::vector<std::vector<double>> fToBeSnd; // vectors of the data to be sended
-    std::vector<std::vector<double>> fToBeRcv; // vectors of the data to be received
+    std::vector<std::vector<double>> fToBeRcv; // vectors of the data to be received    
     bool newJ; intMatrix jn;
     int Npq2;
     for (long iC=0; iC<nCells; iC++)
@@ -144,7 +145,8 @@ int main(int argc, char** argv)
                 }
             }
         }
-    }
+    }    
+    MPI_Barrier(MPI_COMM_WORLD);
     std::vector <MPI_Request> rqs(nJnPr);
     std::vector <MPI_Request> rqs2(2*nJnPr);
     for (int i=0; i<nJnPr; i++) // exchange the linking data between the processes
@@ -156,15 +158,23 @@ int main(int argc, char** argv)
         else // if the present process rank is larger than the joined one
         {
             MPI_Irecv(jnFaces[i].data(),jnFaces[i].size(),MPI_INT,jnPr[i],1,MPI_COMM_WORLD,&rqs[i]); // the linking indices are received
+        }
+    }
+    MPI_Waitall(nJnPr,rqs.data(),MPI_STATUSES_IGNORE);
+    MPI_Barrier(MPI_COMM_WORLD);
+//  
+    for (int i=0; i<nJnPr; i++)
+    {
+        if (myRank>jnPr[i]) // if the present process rank is larger than the joined one
+        {
             for (int j=0; j<jnFaces[i].size();j+=2)
             {
                 e[jnFaces[i][j]].setJoin(jnFaces[i][j+1],1,i); // the second element in the face join vector of the joined cell
                 e[jnFaces[i][j]].setJoin(jnFaces[i][j+1],2,j/2); // the second element in the face join vector of the joined cell
                 // is substituted with the index of the face in the interface wall
             }
-        }        
+        }
     }
-    MPI_Waitall(nJnPr,rqs.data(),MPI_STATUSES_IGNORE);    
 //
     initialConditions(caseName,nCells,e,glb,myRank);
     matrix H;
@@ -199,13 +209,14 @@ int main(int argc, char** argv)
 //                e[iC].step_0(BC); // computes conservative and auxiliary (primitive) variables on side quadrature points
             }
 // computes (far all elements) the auxiliary variables gradients and physical fluxes
-
+    MPI_Barrier(MPI_COMM_WORLD);   
     for (int i=0; i<nJnPr; i++) // exchange the data between the processes
     {
         MPI_Isend(qToBeSnd[i].data(),qToBeSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs2[i]); // the linking indices are sent
         MPI_Irecv(qToBeRcv[i].data(),qToBeRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs2[i]); // the linking indices are received
     }
-    MPI_Waitall(nJnPr,rqs2.data(),MPI_STATUSES_IGNORE);    
+    MPI_Waitall(nJnPr,rqs2.data(),MPI_STATUSES_IGNORE);
+    MPI_Barrier(MPI_COMM_WORLD);   
 
 #pragma omp parallel for schedule(static)
             for (long iC=0; iC<nCells; iC++)
@@ -219,7 +230,8 @@ int main(int argc, char** argv)
         MPI_Isend(fToBeSnd[i].data(),fToBeSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs2[i]); // the linking indices are sent
         MPI_Irecv(fToBeRcv[i].data(),fToBeRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs2[i]); // the linking indices are received
     }
-    MPI_Waitall(nJnPr,rqs2.data(),MPI_STATUSES_IGNORE);    
+    MPI_Waitall(nJnPr,rqs2.data(),MPI_STATUSES_IGNORE);
+    MPI_Barrier(MPI_COMM_WORLD);
 
 #pragma omp parallel for schedule(static)
             for (long iC=0; iC<nCells; iC++)
