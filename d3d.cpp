@@ -93,8 +93,9 @@ int main(int argc, char** argv)
     std::vector<std::vector<int>> jnFaces; // contains the nJnPr vectors containing the indices of the joined cells and faces
     std::vector<std::vector<double>> qSnd; // vectors of the data to be sended
     std::vector<std::vector<double>> qRcv; // vectors of the data to be received
-    std::vector<std::vector<double>> qASnd; // vectors of the data to be sended
-    std::vector<std::vector<double>> qARcv; // vectors of the data to be received
+//    std::vector<std::vector<double>> qASnd; // vectors of the data to be sended
+//    std::vector<std::vector<double>> qARcv; // vectors of the data to be received
+    matrix* qASnd=nullptr; matrix* qARcv=nullptr;
     std::vector<std::vector<double>> fSnd; // vectors of the data to be sended
     std::vector<std::vector<double>> fRcv; // vectors of the data to be received    
     bool newJ; intMatrix jn;
@@ -131,13 +132,16 @@ int main(int argc, char** argv)
                 }
             }
         }
-    }    
+    }
+    if (nJnPr>0) {qASnd=new matrix[nJnPr]; qARcv=new matrix[nJnPr];}  
     for (int i=0; i<nJnPr; i++) // allocate the buffers for data exchange between the processes
     {
         qSnd.emplace_back(std::vector<double>((jnFaces[i].size()/2)*Npq2*5, 0));
         qRcv.emplace_back(std::vector<double>((jnFaces[i].size()/2)*Npq2*5, 0));
-        qASnd.emplace_back(std::vector<double>((jnFaces[i].size()/2)*Npq2*4, 0));
-        qARcv.emplace_back(std::vector<double>((jnFaces[i].size()/2)*Npq2*4, 0));
+//        qASnd.emplace_back(std::vector<double>((jnFaces[i].size()/2)*Npq2*4, 0));
+//        qARcv.emplace_back(std::vector<double>((jnFaces[i].size()/2)*Npq2*4, 0));
+        qASnd[i].dim((jnFaces[i].size()/2)*Npq2,4);
+        qARcv[i].dim((jnFaces[i].size()/2)*Npq2,4);
         fSnd.emplace_back(std::vector<double>((jnFaces[i].size()/2)*Npq2*5, 0));
         fRcv.emplace_back(std::vector<double>((jnFaces[i].size()/2)*Npq2*5, 0));
     }
@@ -201,7 +205,7 @@ int main(int argc, char** argv)
 #pragma omp parallel for schedule(static)
             for (long iC=0; iC<nCells; iC++)
             {
-                e[iC].step_0(BC,myRank,&qSnd,&qASnd); // computes conservative and auxiliary (primitive) variables on side quadrature points
+                e[iC].step_0(BC,myRank,&qSnd,qASnd); // computes conservative and auxiliary (primitive) variables on side quadrature points
             }
 // computes (far all elements) the auxiliary variables gradients and physical fluxes
     for (int i=0; i<nJnPr; i++) // exchange the data between the processes
@@ -217,7 +221,7 @@ int main(int argc, char** argv)
 #pragma omp parallel for schedule(static)
             for (long iC=0; iC<nCells; iC++)
             {
-                e[iC].step_I(caseName,e,BC,&dmpH,myRank,&qARcv,&fSnd); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
+                e[iC].step_I(caseName,e,BC,&dmpH,myRank,qARcv,&fSnd); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
             }
 // computes numerical fluxes and advances the solution
 

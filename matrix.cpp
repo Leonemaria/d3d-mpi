@@ -103,6 +103,10 @@ double matrix::det() const
     }
     return d;
 }        
+double* matrix::data()
+{
+    return &a[0];
+}
 void matrix::dim(int n, int m)
 {
     if (size()>0) {delete[] a; a=nullptr;}

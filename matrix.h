@@ -24,6 +24,7 @@ class matrix
         matrix col(int j) const;
         void combineRows(int i1, double c1, int i2, double c2, int i3);
         double complement(int i, int j) const;
+        double* data();
         double det() const;
         void dim(int n, int m);
         void dim(int n);
@@ -65,10 +66,11 @@ class matrix
         matrix operator-() const;
         friend matrix operator*(double c, const matrix& m);
         friend matrix operator*(int c, const matrix& m);
+// public variable declarations
+        double* a=nullptr;       
     private:
 // private variable declarations
         int nr=0, nc=0;
-        double* a=nullptr;       
 };
 //
 // this class defines the matrix (n x m) of integer numbers

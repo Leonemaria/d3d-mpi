@@ -239,7 +239,7 @@ void physicalElement::setJoin(int i, int j, int k)
 {
     join.set(i,j,k);
 }
-void physicalElement::step_0(boundaryCondition BC[], int myRank, std::vector<std::vector<double>> *qSnd, std::vector<std::vector<double>> *qASnd)
+void physicalElement::step_0(boundaryCondition BC[], int myRank, std::vector<std::vector<double>> *qSnd, matrix qASnd[])
 //void physicalElement::step_0(boundaryCondition BC[])
 // computes conservative and auxiliary (primitive) variables on side quadrature points
 // the conservative variables are stored in the matrix qS while the auxiliary variables are stored in the matrix qAuxS
@@ -284,14 +284,14 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, std::vector<std
                 for (int i=0; i<Npq2; i++)
                 {
                     rSTDMatr(qSnd,qS.row(iS*Npq2+i),jPr,(jFc*Npq2+i)*5);                    
-                    rSTDMatr(qASnd,qAuxS.row(iS*Npq2+i),jPr,(jFc*Npq2+i)*4);                    
+                    qASnd[jPr].set(jFc*Npq2+i,0,qAuxS.row(iS*Npq2+i));                    
                 }
             }        
        }
    }
 }
 void physicalElement::step_I(std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH, int myRank,
-     std::vector<std::vector<double>> *qARcv, std::vector<std::vector<double>> *fSnd)
+     matrix qARcv[], std::vector<std::vector<double>> *fSnd)
 // computes the auxiliary variable gradients and physical fluxes on internal and side quadrature points
 // the internal fluxes (convective-viscous) are stored in the matrix array fluxq[3]: the i-th matrix contains the i-th component of fluxes
 // the side fluxes are stored
@@ -335,7 +335,7 @@ void physicalElement::step_I(std::string nameCase, physicalElement e[], boundary
                 for (int i=0; i<Npq2; i++)
                 {
                     iExt=(*cE).extIndex(i%Npq2,join.get(iS,3)); // i index of the point on the connected element side
-                    qMed=0.5*(qAuxS.row(iS*Npq2+i)+rSTDMatr(qARcv,jPr,(jFc*Npq2+iExt)*4,4));
+                    qMed=0.5*(qAuxS.row(iS*Npq2+i)+qARcv[jPr].row(jFc*Npq2+iExt));
                     numFlx[0].set(iS*Npq2+i,0,JS[iS]*qMed*n[iS][0]);
                     numFlx[1].set(iS*Npq2+i,0,JS[iS]*qMed*n[iS][1]);
                     numFlx[2].set(iS*Npq2+i,0,JS[iS]*qMed*n[iS][2]);
