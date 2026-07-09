@@ -56,11 +56,11 @@ class physicalElement
         void setIniCond(std::string caseName);
         void setJoin(int i, int j, int k);
 //        void step_0(boundaryCondition BC[]);
-        void step_0(boundaryCondition BC[], int myRank, std::vector<std::vector<double>> *qToBeSnd);
+        void step_0(boundaryCondition BC[], int myRank, std::vector<std::vector<double>> *qSnd, std::vector<std::vector<double>> *qASnd);
         void step_I(std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH, int myRank,
-             std::vector<std::vector<double>> *qToBeRcv, std::vector<std::vector<double>> *fToBeSnd);
+             std::vector<std::vector<double>> *qARcv, std::vector<std::vector<double>> *fSnd);
         void step_II(double dt, int m, physicalElement e[], bool dmpR, int myRank,
-             std::vector<std::vector<double>> *qToBeRcv, std::vector<std::vector<double>> *fToBeRcv);
+             std::vector<std::vector<double>> *qRcv, std::vector<std::vector<double>> *fRcv);
         void viscousFlux(matrix vF[], double u, double v, double w, symTensor tau, vector3D heat);
         void viscousFlux(matrix vF[], double u, double v, double w, symTensor tau, vector3D heat, vector3D taK);
         void viscFluxes(matrix* qq, matrix* qA, matrix* dx, matrix* dy, matrix* dz, matrix* qF);
