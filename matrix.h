@@ -66,11 +66,10 @@ class matrix
         matrix operator-() const;
         friend matrix operator*(double c, const matrix& m);
         friend matrix operator*(int c, const matrix& m);
-// public variable declarations
-        double* a=nullptr;       
     private:
 // private variable declarations
         int nr=0, nc=0;
+        double* a=nullptr;       
 };
 //
 // this class defines the matrix (n x m) of integer numbers
