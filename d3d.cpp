@@ -144,9 +144,7 @@ int main(int argc, char** argv)
         fSnd[i].dim((jnFaces[i].size()/2)*Npq2,5);
         fRcv[i].dim((jnFaces[i].size()/2)*Npq2,5);
     }
-    MPI_Request rqs[nJnPr];
-    MPI_Request rqs2[2*nJnPr];
-    MPI_Request rqs4[4*nJnPr];
+    MPI_Request rqs[4*nJnPr];
     for (int i=0; i<nJnPr; i++) // exchange the linking data between the processes
     {
         if (myRank<jnPr[i]) // if the present process rank is lower than the joined one
@@ -209,12 +207,12 @@ int main(int argc, char** argv)
 // computes (far all elements) the auxiliary variables gradients and physical fluxes
     for (int i=0; i<nJnPr; i++) // exchange the data between the processes
     {
-        MPI_Isend(qSnd[i].data(),qSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs4[i]); // the linking indices are sent
-        MPI_Isend(qASnd[i].data(),qASnd[i].size(),MPI_DOUBLE,jnPr[i],2,MPI_COMM_WORLD,&rqs4[i+1]); // the linking indices are sent
-        MPI_Irecv(qRcv[i].data(),qRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs4[i+2]); // the linking indices are received
-        MPI_Irecv(qARcv[i].data(),qARcv[i].size(),MPI_DOUBLE,jnPr[i],2,MPI_COMM_WORLD,&rqs4[i+3]); // the linking indices are received
+        MPI_Isend(qSnd[i].data(),qSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*4]); // the linking indices are sent
+        MPI_Isend(qASnd[i].data(),qASnd[i].size(),MPI_DOUBLE,jnPr[i],2,MPI_COMM_WORLD,&rqs[i*4+1]); // the linking indices are sent
+        MPI_Irecv(qRcv[i].data(),qRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*4+2]); // the linking indices are received
+        MPI_Irecv(qARcv[i].data(),qARcv[i].size(),MPI_DOUBLE,jnPr[i],2,MPI_COMM_WORLD,&rqs[i*4+3]); // the linking indices are received
     }
-    MPI_Waitall(4*nJnPr,rqs4,MPI_STATUSES_IGNORE);
+    MPI_Waitall(4*nJnPr,rqs,MPI_STATUSES_IGNORE);
     MPI_Barrier(MPI_COMM_WORLD);   
 
 #pragma omp parallel for schedule(static)
@@ -226,10 +224,10 @@ int main(int argc, char** argv)
 
     for (int i=0; i<nJnPr; i++) // exchange the data between the processes
     {
-        MPI_Isend(fSnd[i].data(),fSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs2[i]); // the linking indices are sent
-        MPI_Irecv(fRcv[i].data(),fRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs2[i+1]); // the linking indices are received
+        MPI_Isend(fSnd[i].data(),fSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*2]); // the linking indices are sent
+        MPI_Irecv(fRcv[i].data(),fRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*2+1]); // the linking indices are received
     }
-    MPI_Waitall(2*nJnPr,rqs2,MPI_STATUSES_IGNORE);
+    MPI_Waitall(2*nJnPr,rqs,MPI_STATUSES_IGNORE);
     MPI_Barrier(MPI_COMM_WORLD);
 
 #pragma omp parallel for schedule(static)
