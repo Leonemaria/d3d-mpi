@@ -33,7 +33,7 @@ void srcFunc(std::string caseName, matrix* B, matrix* q, double gam, double Ma, 
     int Np=(*q).nR();
     if (caseName=="poiseuille")
     {
-        double p_x_gM2=3./Re;
+        double p_x_gM2=4./Re;
         for (int i=0; i<Np; i++)
         {
             (*B).set(i,0,0.);

@@ -198,15 +198,15 @@ double physicalElement::Jacobian()
 {
     return J;
 }
-matrix physicalElement::LaxFriedrichs(int iS, matrix qInt, matrix qExt, matrix fMean)
+matrix physicalElement::LaxFriedrichs(int iS, matrix qInt, matrix qExt, matrix fInt, matrix fExt)
 // Lax-Friedrichs numerical flux computation
 // NB: If fMean includes viscous flux this numerical flux will include viscous contribution too, according to BR1 scheme (Bassi&Rebay 1997)
 {
     double UnInt=(qInt.get(1)*n[iS][0]+qInt.get(2)*n[iS][1]+qInt.get(3)*n[iS][2])/qInt.get(0);
     double UnExt=(qExt.get(1)*n[iS][0]+qExt.get(2)*n[iS][1]+qExt.get(3)*n[iS][2])/qExt.get(0);
     double cInt=soundSpeed(&qInt,gam,Ma), cExt=soundSpeed(&qExt,gam,Ma);
-    double C=std::max(abs(UnInt)+cInt, abs(UnExt)+cExt)/2.;
-    return fMean+C*(qInt-qExt);
+    double C=std::max(abs(UnInt)+cInt, abs(UnExt)+cExt);
+    return (fInt+fext+C*(qInt-qExt))/2.;
 }
 int physicalElement::nQuadPoints()
 {
@@ -246,13 +246,7 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[], 
 {
     double rho;
     qS=(*cE).getPHI2()*A; // projects nodal solution on quadrature points: qS is the matrix containing side values (in quadrature points)
-    for (int i=0; i<Npq2*4; i++)
-    {
-        rho=qS.get(i,0);
-        qAuxS.set(i,0,qS.get(i,1)/rho); qAuxS.set(i,1,qS.get(i,2)/rho); qAuxS.set(i,2,qS.get(i,3)/rho); // set the side values (in i-th quadrature point) of the three first auxiliary variables (u, v and w) in qAuxS matrix
-        qAuxS.set(i,3,pressure(qS.row(i),gam,Ma)/rho); // set the side values (in i-th quadrature point) of the fourth auxiliary variables (T) in qAuxS matrix
-    }
-//    if (myRank==1&mySelf==4) {qAuxS.row(Npq2).print();}
+    
     for (int iS=0; iS<4; iS++)
     {
         if (BS[iS])
@@ -275,20 +269,25 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[], 
                 break;
             }
         }
-        else        
+        else       
         {
-            if (join.get(iS,0)!=myRank)
+            for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
             {
-                int jPr=join.get(iS,1);
-                int jFc=join.get(iS,2);
-                for (int i=0; i<Npq2; i++)
-                {
-                    qSnd[jPr].set(jFc*Npq2+i,0,qS.row(iS*Npq2+i));                    
-                    qASnd[jPr].set(jFc*Npq2+i,0,qAuxS.row(iS*Npq2+i));                    
-                }
-            }        
-       }
-   }
+                rho=qS.get(i,0);
+                for (int eq=0; eq<nAux-1; eq++) {qAuxS.set(i,eq,qS.get(i,eq+1)/rho);}; qAuxS.set(i,3,pressure(qS.row(i),gam,Ma)/rho);
+            }
+        }       
+        if (join.get(iS,0)!=myRank)
+        {
+            int jPr=join.get(iS,1);
+            int jFc=join.get(iS,2);
+            for (int i=0; i<Npq2; i++)
+            {
+                qSnd[jPr].set(jFc*Npq2+i,0,qS.row(iS*Npq2+i));                    
+                qASnd[jPr].set(jFc*Npq2+i,0,qAuxS.row(iS*Npq2+i));                    
+            }
+        }        
+    }
 }
 void physicalElement::step_I(std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH, int myRank,
      matrix qARcv[], matrix fSnd[])
@@ -423,7 +422,7 @@ void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, 
                         for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
                         {
                             iExt=(*cE).extIndex(i%Npq2,join.get(iS,3))+join.get(iS,2)*Npq2; // index of the point on the connected element side
-                            numFlx.set(i,0,JS[iS]*LaxFriedrichs(iS,qS.row(i),(*eJ).getQS(iExt),0.5*(flxS.row(i)-(*eJ).getFlxS(iExt)))); // numerical flux times face Jacobian
+                            numFlx.set(i,0,JS[iS]*LaxFriedrichs(iS,qS.row(i),(*eJ).getQS(iExt),flxS.row(i),-(*eJ).getFlxS(iExt))); // numerical flux times face Jacobian
                          }
                     break;
                     case 1: // HLL+BR1
@@ -447,7 +446,7 @@ void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, 
                         {
                             iExt=(*cE).extIndex(i%Npq2,join.get(iS,3)); // index of the point on the connected element side
                             numFlx.set(i,0,JS[iS]*LaxFriedrichs(iS,qS.row(i),qRcv[jPr].row(jFc*Npq2+iExt),
-                                      0.5*(flxS.row(i)-fRcv[jPr].row(jFc*Npq2+iExt)))); // numerical flux times face Jacobian
+                                      flxS.row(i),-fRcv[jPr].row(jFc*Npq2+iExt))); // numerical flux times face Jacobian
                         }
                     break;
                     case 1: // HLL+BR1
@@ -682,7 +681,7 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
         {
             double mu, k, u, v, w, T, ggm1=gam/(gam-1.);
             symTensor Sr, tau; vector3D gradT, heat;
-            matrix qInt(1,nEq); matrix qExt(1,nEq); matrix flxB;
+            matrix qInt(1,nEq); matrix qExt(1,nEq); matrix flxInt; matrux flxExt;
             matrix bF[3]; bF[0].dim(1,nEq); bF[1].dim(1,nEq); bF[2].dim(1,nEq);
             for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
             {
@@ -693,9 +692,10 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 qExt.set(0,3,2.*(*BC).getQ(8)*qExt.get(0)-qInt.get(3)); // z momentum external value (extrapolating from inetrnal and boundary values)
                 qExt.set(0,4,qInt.get(4)); // external energy equal to internl value
                 convFlux(bF,qInt.get(0),qInt.get(1),qInt.get(2),qInt.get(3),qInt.get(4));
-                flxB=(bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2])/2.;
+                flxInt=bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2];
                 convFlux(bF,qExt.get(0),qExt.get(1),qExt.get(2),qExt.get(3),qExt.get(4));
-                flxB.add(0,0,(bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2])/2.);
+                flxExt=bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2];
+                flxS.set(i,0,LaxFriedrichs(iS,qInt,qExt,flxInt,flxExt));
                 u=qAuxS.get(i,0); v=qAuxS.get(i,1); w=qAuxS.get(i,2); T=qAuxS.get(i,3);
                 Sr=strainRate((*dx).row(i),(*dy).row(i),(*dz).row(i));
                 mu=Sutherland(T,S,Re); k=mu/Pr;
@@ -703,8 +703,7 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 tau=mu*Sr.noTrace();
                 heat=-k*ggm1*gradT;
                 viscousFlux(bF,u,v,w,tau,heat);
-                flxB.add(0,0,bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2]);
-                flxS.set(i,0,LaxFriedrichs(iS,qInt,qExt,flxB));
+                flxS.add(0,0,bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2]);
             }
         }
         break;
@@ -712,7 +711,7 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
         {
             double mu, k, u, v, w, T, ggm1=gam/(gam-1.);
             symTensor Sr, tau; vector3D gradT, heat;
-            matrix qInt(1,nEq); matrix qExt(1,nEq); matrix flxB;
+            matrix qInt(1,nEq); matrix qExt(1,nEq); matrix flxInt; matrux flxExt;
             matrix bF[3]; bF[0].dim(1,nEq); bF[1].dim(1,nEq); bF[2].dim(1,nEq);
             double q_n;
             for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
@@ -724,9 +723,10 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 qExt.set(0,3,2.*(*BC).getQ(8)*qExt.get(0)-qInt.get(3)); // z momentum external value (extrapolating from inetrnal and boundary values)
                 qExt.set(0,4,qInt.get(4)); // external energy equal to internl value
                 convFlux(bF,qInt.get(0),qInt.get(1),qInt.get(2),qInt.get(3),qInt.get(4));
-                flxB=(bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2])/2.;
+                flxInt=bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2];
                 convFlux(bF,qExt.get(0),qExt.get(1),qExt.get(2),qExt.get(3),qExt.get(4));
-                flxB.add(0,0,(bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2])/2.);
+                flxExt=bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2];
+                flxS.set(i,0,LaxFriedrichs(iS,qInt,qExt,flxInt,flxExt));
                 u=qAuxS.get(i,0); v=qAuxS.get(i,1); w=qAuxS.get(i,2); T=qAuxS.get(i,3);
                 Sr=strainRate((*dx).row(i),(*dy).row(i),(*dz).row(i));
                 mu=Sutherland(T,S,Re); k=mu/Pr;
@@ -736,8 +736,7 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 tau=mu*Sr.noTrace();
                 heat=-k*ggm1*gradT;
                 viscousFlux(bF,u,v,w,tau,heat);
-                flxB.add(0,0,bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2]);
-                flxS.set(i,0,LaxFriedrichs(iS,qInt,qExt,flxB));
+                flxS.add(0,0,bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2]);
             }
         }
         break;
