@@ -26,7 +26,7 @@ int main(int argc, char** argv)
     int myRank;
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 // Header
-    std::cout << "*** d3d START ***\n";
+    if (myRank==0) {std::cout << "*** d3d START ***\n";}
 // input of computational ambient data
     global glb;
     std::string caseName, s; int Nth;
@@ -255,7 +255,7 @@ int main(int argc, char** argv)
             {
                 totResidual=totResidual/totVolume;
                 outputFileRes << i << " " << totResidual << " " << maxCFL << std::endl;
-                std::cout << "Res.=" << totResidual << "  CFL=" << maxMaxCFL << std::endl;
+                std::cout << "It.=" << i << "  Res.=" << totResidual << "  CFL=" << maxMaxCFL << std::endl;
             }
             dmpR=false;
         }
