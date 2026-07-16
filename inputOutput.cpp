@@ -13,7 +13,6 @@ void initialConditions(std::string caseName, long nCells, physicalElement e[], c
     {
         double aM; std::string st=std::to_string(glb.ctr[0]); std::string process=std::to_string(rank);
         std::string s="./"+caseName+"/output/result_pr"+process+"_it"+st+".dat"; std::ifstream fin(s); chk(fin,s); 
-        std::cout << s << std::endl;        
 	skipLine(fin, 1); int Nm;
         for (long iC=0; iC<nCells; iC++)
         {

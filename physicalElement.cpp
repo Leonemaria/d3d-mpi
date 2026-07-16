@@ -48,6 +48,7 @@ void physicalElement::init(int my, computationalElement *c, vector3D x[], long i
     r_x[2]=(x_r[1]*x_s[2]-x_r[2]*x_s[1])/J;
     r_y[2]=-(x_r[0]*x_s[2]-x_r[2]*x_s[0])/J;
     r_z[2]=(x_r[0]*x_s[1]-x_r[1]*x_s[0])/J;
+    A.dim(Nm,nEq);
     flxq[0].dim(Npq,nEq); flxq[1].dim(Npq,nEq); flxq[2].dim(Npq,nEq); // dimensioning of the numerical fluxes matrices (one for each dimension)
     flxS.dim(4*Npq2,nEq);  // dimensioning of the face physical fluxes matrices (convective and viscous)
     qS.dim(4*Npq2,nEq); // dimensioning of the matrices containing the conservative variables interpolated over the face quadrature points

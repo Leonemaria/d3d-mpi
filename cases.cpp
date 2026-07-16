@@ -45,7 +45,8 @@ void srcFunc(std::string caseName, matrix* B, matrix* q, double gam, double Ma, 
             (*B).set(i,1,p_x_gM2);
             (*B).set(i,2,0.);
             (*B).set(i,3,0.);
-            (*B).set(i,4,(*q).get(i,1)*p_x_gM2*gam*sq(Ma)*(1.-gam/(gam-1)/(Re*0.71))/(*q).get(i,0));
+//            (*B).set(i,4,(*q).get(i,1)*p_x_gM2*gam*sq(Ma)*(1.-gam/(gam-1)/(Re*0.71))/(*q).get(i,0));
+            (*B).set(i,4,(*q).get(i,1)*p_x_gM2*gam*sq(Ma)/(*q).get(i,0));
         }
     }
     if (caseName=="poiseuille") // Isothermal Poiseuille plane channel flow with channel height h=1
