@@ -101,4 +101,31 @@ class intMatrix
         int nr=0, nc=0;
         int* a=nullptr;       
 };
+class longMatrix
+{
+    public:
+// constructors/destructor declarations
+        longMatrix();
+        longMatrix(int n, int m);
+        longMatrix(int n);
+        longMatrix(const longMatrix& other);
+        longMatrix& operator=(const longMatrix& other);
+        ~longMatrix();
+// public methods declarations
+        void dim(int n, int m);
+        void dim(int n);
+        long get(int i,int j) const;
+        long get(int i) const;
+        int nR() const;
+        int nC() const;
+        void print() const;
+        void set(int i, int j, long aij);
+        void set(int i, long ai);
+        int size() const;
+        void zero();
+    private:
+// private variable declarations
+        int nr=0, nc=0;
+        long* a=nullptr;       
+};
 #endif

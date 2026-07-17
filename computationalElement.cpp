@@ -159,10 +159,14 @@ matrix computationalElement::wQuad()
 {
     return w3D;
 }
-matrix computationalElement::subStep(double d, matrix f[], matrix* fS, matrix* B, vector3D r_x, vector3D r_y, vector3D r_z)
+matrix computationalElement::subStep_a(double d, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z)
 {  
-    if(src>0) { return d*((r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f[0]+(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f[1]+(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f[2]-E2*(*fS)+E*(*B));}
-    else {return d*((r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f[0]+(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f[1]+(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f[2]-E2*(*fS));}
+    if(src>0) { return d*((r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f[0]+(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f[1]+(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f[2]+E*(*B));}
+    else {return d*((r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f[0]+(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f[1]+(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f[2]);}
+}
+matrix computationalElement::subStep_b(double d, matrix* fS)
+{  
+    return -d*E2*(*fS);
 }
 void computationalElement::step_I(matrix* A_x, matrix* A_y, matrix* A_z, matrix f, matrix fS[], vector3D r_x, vector3D r_y, vector3D r_z)
 {
@@ -170,25 +174,46 @@ void computationalElement::step_I(matrix* A_x, matrix* A_y, matrix* A_z, matrix 
     (*A_y)=-(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f+E2*fS[1];
     (*A_z)=-(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f+E2*fS[2];
 }
-void computationalElement::step_II(double d, int m, matrix* KA, matrix* A, matrix* A_0, matrix f[], matrix* fS, matrix* B, vector3D r_x, vector3D r_y, vector3D r_z)
+void computationalElement::step_IIa(double d, int m, matrix* KA, matrix* A, matrix* A_0, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z)
 {
 // five step fourth order Runge Kutta scheme SSPRK(5,4) (Gottlieb&Ketcheson&Shu pag.23)
     switch (m)
     {
         case 0:
-            (*A_0)=(*A); (*A)+=subStep(0.391752226571890*d,f,fS,B,r_x,r_y,r_z);
+            (*A_0)=(*A); (*A)+=subStep_a(0.391752226571890*d,f,B,r_x,r_y,r_z);
         break;
         case 1:
-            (*A)=0.444370493651235*(*A_0)+0.555629506348765*(*A)+subStep(0.368410593050371*d,f,fS,B,r_x,r_y,r_z);
+            (*A)=0.444370493651235*(*A_0)+0.555629506348765*(*A)+subStep_a(0.368410593050371*d,f,B,r_x,r_y,r_z);
         break;
         case 2:
-            (*KA)=0.517231671970585*(*A); (*A)=0.620101851488403*(*A_0)+0.379898148511597*(*A)+subStep(0.251891774271694*d,f,fS,B,r_x,r_y,r_z);
+            (*KA)=0.517231671970585*(*A); (*A)=0.620101851488403*(*A_0)+0.379898148511597*(*A)+subStep_a(0.251891774271694*d,f,B,r_x,r_y,r_z);
         break;
         case 3:
-            (*A)=0.821920045606868*(*A)+subStep(0.544974750228521*d,f,fS,B,r_x,r_y,r_z); (*KA)+=0.116872329662213*(*A); (*A)+=0.178079954393132*(*A_0);
+            (*A)=0.821920045606868*(*A)+subStep_a(0.544974750228521*d,f,B,r_x,r_y,r_z);
         break;
         case 4:
-            (*A)=(*KA)+0.386708617503269*(*A)+subStep(0.226007483236906*d,f,fS,B,r_x,r_y,r_z);
+            (*A)=(*KA)+0.386708617503269*(*A)+subStep_a(0.226007483236906*d,f,B,r_x,r_y,r_z);
+         break;
+    }
+}void computationalElement::step_IIb(double d, int m, matrix* KA, matrix* A, matrix* A_0, matrix* fS)
+{
+// five step fourth order Runge Kutta scheme (addition of surface integral)
+    switch (m)
+    {
+        case 0:
+            (*A)+=subStep_b(0.391752226571890*d,fS);
+        break;
+        case 1:
+            (*A)+=subStep_b(0.368410593050371*d,fS);
+        break;
+        case 2:
+            (*A)+=subStep_b(0.251891774271694*d,fS);
+        break;
+        case 3:
+            (*A)+=subStep_b(0.544974750228521*d,fS); (*KA)+=0.116872329662213*(*A); (*A)+=0.178079954393132*(*A_0);
+        break;
+        case 4:
+            (*A)+=subStep_b(0.226007483236906*d,fS);
          break;
     }
 }

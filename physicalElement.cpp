@@ -6,7 +6,7 @@ physicalElement::physicalElement()
 {
 }
 // methods
-void physicalElement::init(int my, computationalElement *c, vector3D x[], long iV[], intMatrix l, const global& glb)
+void physicalElement::init(int my, computationalElement *c, vector3D x[], long iV[], longMatrix l, const global& glb)
 {
     Ma=glb.phy[0]; Re=glb.phy[1]; Fr=glb.phy[2]; Pr=glb.phy[3]; gam=glb.phy[4]; S=glb.phy[5]; gaM2=gam*sq(Ma);
     N=glb.sch[0]; LES=glb.sch[1]; CIF=glb.sch[2]; src=glb.sch[3];
@@ -49,7 +49,6 @@ void physicalElement::init(int my, computationalElement *c, vector3D x[], long i
     r_y[2]=-(x_r[0]*x_s[2]-x_r[2]*x_s[0])/J;
     r_z[2]=(x_r[0]*x_s[1]-x_r[1]*x_s[0])/J;
     A.dim(Nm,nEq);
-    flxq[0].dim(Npq,nEq); flxq[1].dim(Npq,nEq); flxq[2].dim(Npq,nEq); // dimensioning of the numerical fluxes matrices (one for each dimension)
     flxS.dim(4*Npq2,nEq);  // dimensioning of the face physical fluxes matrices (convective and viscous)
     qS.dim(4*Npq2,nEq); // dimensioning of the matrices containing the conservative variables interpolated over the face quadrature points
     qAuxS.dim(4*Npq2,nAux); // dimensioning of the matrices containing the auxiliary variables interpolated over the face quadrature points
@@ -101,7 +100,7 @@ void physicalElement::convFlux(matrix cF[], double rho, double rhoU, double rhoV
     cF[0].set(3,rhoW*u); cF[1].set(3,rhoW*v); cF[2].set(3,rhoW*w+p/gaM2);
     cF[0].set(4,u*(E+p)); cF[1].set(4,v*(E+p)); cF[2].set(4,w*(E+p));
 }
-void physicalElement::convFluxes(matrix* qq)
+void physicalElement::convFluxes(matrix flxq[], matrix* qq)
 // compute the convective flux
 {
     matrix cF[3]; cF[0].dim(1,nEq); cF[1].dim(1,nEq); cF[2].dim(1,nEq);
@@ -129,7 +128,7 @@ matrix physicalElement::getHist()
 {
     return H;
 }
-intMatrix physicalElement::getJoin()
+longMatrix physicalElement::getJoin()
 {
     return join;
 }
@@ -236,7 +235,7 @@ void physicalElement::setIniCond(std::string caseName)
     }
     A=(*cE).getE()*qq;
 }
-void physicalElement::setJoin(int i, int j, int k)
+void physicalElement::setJoin(int i, int j, long k)
 {
     join.set(i,j,k);
 }
@@ -291,13 +290,14 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[], 
        }
    }
 }
-void physicalElement::step_I(std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH, int myRank,
+void physicalElement::step_I(double dt, int m, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH, int myRank,
      matrix qARcv[], matrix fSnd[])
 // computes the auxiliary variable gradients and physical fluxes on internal and side quadrature points
 // the internal fluxes (convective-viscous) are stored in the matrix array fluxq[3]: the i-th matrix contains the i-th component of fluxes
 // the side fluxes are stored
 {
     matrix qMed(1,nAux);
+    matrix flxq[3]; flxq[0].dim(Npq,nEq); flxq[1].dim(Npq,nEq); flxq[2].dim(Npq,nEq); // dimensioning of the numerical fluxes matrices (one for each dimension)
     double rho, rhoU, rhoV, rhoW, E, p;
     matrix numFlx[3]; numFlx[0].dim(4*Npq2,nAux); numFlx[1].dim(4*Npq2,nAux); numFlx[2].dim(4*Npq2,nAux);
     flxS.zero();
@@ -317,7 +317,7 @@ void physicalElement::step_I(std::string nameCase, physicalElement e[], boundary
         {
             if (join.get(iS,0)==myRank)
             {
-                int eJ=join.get(iS,1); // element connected to iS-th side
+                long eJ=join.get(iS,1); // element connected to iS-th side
                 int iExt;
                 for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
                 {
@@ -367,7 +367,7 @@ void physicalElement::step_I(std::string nameCase, physicalElement e[], boundary
         H=integralM(var);
     }     
     // compute the viscous part (including sgs) of physical fluxes on quadrature points
-    viscFluxes(&qq,&qqAux,&qq_x,&qq_y,&qq_z,&qF); // viscous/sgs flux on internal quadrature points
+    viscFluxes(flxq,&qq,&qqAux,&qq_x,&qq_y,&qq_z,&qF); // viscous/sgs flux on internal quadrature points
     if (LES>1) {qF=(*cE).getF2()*qL;}
     for (int iS=0; iS<4; iS++)
     {
@@ -395,11 +395,12 @@ void physicalElement::step_I(std::string nameCase, physicalElement e[], boundary
     }
     //
     // compute the convective part of physical fluxes on quadrature points
-    convFluxes(&qq); // add convective flux on volume quadrature points
+    convFluxes(flxq,&qq); // add convective flux on volume quadrature points
     
     if (src>0) {srcFunc(nameCase,&B,&qq,gam,Ma,Re);}   
- 
+    (*cE).step_IIa(dt,m,&KA,&A,&A_0,flxq,&B,r_x,r_y,r_z); //computation of mode amplitude of condervative variables (just volume integrals) 
 }
+
 void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, int myRank, matrix qRcv[], matrix fRcv[])
 {
     matrix numFlx(4*Npq2,nEq);
@@ -462,7 +463,7 @@ void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, 
             }
         }
     }
-    (*cE).step_II(dt,m,&KA,&A,&A_0,flxq,&numFlx,&B,r_x,r_y,r_z); //computation of mode amplitude of condervative variables
+    (*cE).step_IIb(dt,m,&KA,&A,&A_0,&numFlx); //computation of mode amplitude of condervative variables (addition of surface integral)
     if (dmpR) {res=integral((*cE).getPHI()*(A.col(0)-A_0.col(0)));}
 }
 void physicalElement::viscousFlux(matrix vF[], double u, double v, double w, symTensor tau, vector3D heat)
@@ -485,7 +486,7 @@ void physicalElement::viscousFlux(matrix vF[], double u, double v, double w, sym
     vF[1].set(4,-gaM2*(taK[1]+u*tau.get(1,0)+v*tau.get(1,1)+w*tau.get(1,2))+heat[1]);
     vF[2].set(4,-gaM2*(taK[2]+u*tau.get(2,0)+v*tau.get(2,1)+w*tau.get(2,2))+heat[2]);
 }
-void physicalElement::viscFluxes(matrix* qq, matrix* qA, matrix* dx, matrix* dy, matrix* dz, matrix* qF)
+void physicalElement::viscFluxes(matrix flxq[], matrix* qq, matrix* qA, matrix* dx, matrix* dy, matrix* dz, matrix* qF)
 /// computation of viscous fluxes in the three internal flx matrices.
 // (flx[0] for the x-fluxes, flx[1] for the y-fluxes and flx[2] for the z-fluxes)
 {

@@ -61,8 +61,8 @@ double readMesh(std::ifstream &fin1, std::ifstream &fin2, long nNodes, vector3D 
     {
         fin1 >> iN >> xN[iN][0] >> xN[iN][1] >> xN[iN][2]; //grid point reading from mesh file (each point is labeled by a sequential number and is defined by three coordinates)
     }
-    intMatrix l(4,4); l.zero();
-    int i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15;
+    longMatrix l(4,4); l.zero();
+    long i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15;
     //reading link data:
     while (iC<nCells-1) // reading of the cell list (second part of the mesh file) and linkings (link file)
     {

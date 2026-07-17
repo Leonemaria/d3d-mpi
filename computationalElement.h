@@ -28,8 +28,10 @@ class computationalElement
         matrix getF2();
         matrix wQuad();
         void step_I(matrix* A_x, matrix* A_y, matrix* A_z, matrix f, matrix fS[], vector3D r_x, vector3D r_y, vector3D r_z);
-        void step_II(double dt, int m, matrix* KA, matrix* A, matrix* A_0, matrix f[], matrix* fS, matrix* B, vector3D r_x, vector3D r_y, vector3D r_z);
-        matrix subStep(double dt, matrix f[], matrix* fS, matrix* B, vector3D r_x, vector3D r_y, vector3D r_z);
+        void step_IIa(double dt, int m, matrix* KA, matrix* A, matrix* A_0, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z);
+        void step_IIb(double dt, int m, matrix* KA, matrix* A, matrix* A_0, matrix* fS);
+        matrix subStep_a(double dt, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z);
+        matrix subStep_b(double dt, matrix* fS);
         int extIndex(int i, int j);
     private:
 // private variable declarations

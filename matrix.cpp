@@ -591,4 +591,105 @@ void intMatrix::zero()
         a[i]=0;
     }
 }
+
+// constructors of intMatrix
+longMatrix::longMatrix()
+{
+}
+longMatrix::longMatrix(int n, int m)
+{
+    dim(n,m);
+}
+longMatrix::longMatrix(int n)
+{
+    dim(n);
+}
+// copy constructors
+longMatrix::longMatrix(const longMatrix& other)
+{
+    dim(other.nR(),other.nC());
+    for (int i=0; i<size(); i++)
+    {
+        a[i]=other.a[i];
+    }
+}
+longMatrix& longMatrix::operator=(const longMatrix& other)
+{
+    if (this != &other)
+    {
+        dim(other.nR(),other.nC());
+        for (int i=0; i<size(); i++)
+        {
+            a[i]=other.a[i];
+        }
+    }
+    return *this;
+}
+// destructor of intMatrix
+longMatrix::~longMatrix()
+{
+    delete[] a; a=nullptr;
+}
+// methods of intMatrix
+void longMatrix::dim(int n, int m)
+{
+    if (size()>0) {delete[] a; a=nullptr;}
+    nr=n; nc=m;
+    a=new long[nc*nr];
+}
+void longMatrix::dim(int n)
+{
+    if (size()>0) {delete[] a; a=nullptr;}
+    nr=n; nc=1;
+    a=new long[nr];
+}
+long longMatrix::get(int i,int j) const
+{
+    return a[nc*i+j];
+}
+long longMatrix::get(int i) const
+{
+    return a[i];
+}
+int longMatrix::nC() const
+{
+    return nc;
+}
+int longMatrix::nR() const
+{
+    return nr;
+}
+void longMatrix::print() const
+{
+    std::cout << "==================" << std::endl;
+    std::cout << nr << " " << nc << std::endl;
+    for (int i=0; i<nr; i++)
+    {
+        for (int j=0; j<nc; j++)
+        {
+            if (j<nc-1) {std::cout << get(i,j) << " ";}
+            else {std::cout << get(i,j) << std::endl;}
+        }
+    }
+    std::cout << "==================" << std::endl;
+}
+void longMatrix::set(int i, int j, long aij)
+{
+    a[nc*i+j]=aij;
+}
+void longMatrix::set(int i, long ai)
+{
+    a[i]=ai;
+}
+int longMatrix::size() const
+{
+    return nr*nc;
+}
+void longMatrix::zero()
+{
+    for (int i=0; i<size(); i++)
+    {
+        a[i]=0;
+    }
+}
 //
