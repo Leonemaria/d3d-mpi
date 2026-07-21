@@ -6,7 +6,7 @@ physicalElement::physicalElement()
 {
 }
 // methods
-void physicalElement::init(int my, computationalElement *c, vector3D x[], long iV[], longMatrix l, const global& glb)
+void physicalElement::init(int my, computationalElement *c, vector3D x[], int iV[], intMatrix l, const global& glb)
 {
     Ma=glb.phy[0]; Re=glb.phy[1]; Fr=glb.phy[2]; Pr=glb.phy[3]; gam=glb.phy[4]; S=glb.phy[5]; gaM2=gam*sq(Ma);
     N=glb.sch[0]; LES=glb.sch[1]; CIF=glb.sch[2]; src=glb.sch[3];
@@ -128,7 +128,7 @@ matrix physicalElement::getHist()
 {
     return H;
 }
-longMatrix physicalElement::getJoin()
+intMatrix physicalElement::getJoin()
 {
     return join;
 }
@@ -235,7 +235,7 @@ void physicalElement::setIniCond(std::string caseName)
     }
     A=(*cE).getE()*qq;
 }
-void physicalElement::setJoin(int i, int j, long k)
+void physicalElement::setJoin(int i, int j, int k)
 {
     join.set(i,j,k);
 }
@@ -317,7 +317,7 @@ void physicalElement::step_I(double dt, int m, std::string nameCase, physicalEle
         {
             if (join.get(iS,0)==myRank)
             {
-                long eJ=join.get(iS,1); // element connected to iS-th side
+                int eJ=join.get(iS,1); // element connected to iS-th side
                 int iExt;
                 for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
                 {

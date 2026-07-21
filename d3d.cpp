@@ -74,7 +74,7 @@ int main(int argc, char** argv)
     boundaryCondition BC[nBC]; for (int i=1; i<nBC; i++) {BC[i].input(inputFileBC);}   
 //***************************************
 //  input of geometry (points, elements, links and boundary conditions)
-    long nNodes, nCells, totCells=0;
+    int nNodes, nCells, totCells=0;
     s="./"+caseName+"/input/mesh_pr"+process+".dat"; std::ifstream inputFileMesh(s); chk(inputFileMesh,s); // mesh input files
     s="./"+caseName+"/input/link_pr"+process+".dat"; std::ifstream inputFileLink(s); chk(inputFileLink,s); // link input files
     inputFileMesh >> nNodes >> nCells; // reading number of grid points and number of physical cells
@@ -90,13 +90,13 @@ int main(int argc, char** argv)
 // preparation for mpi messaging
     int nJnPr=0; // number of joined processes
     std::vector<int>jnPr; // contains the ranks of connected processes
-    std::vector<std::vector<long>> jnFaces; // contains the nJnPr vectors containing the indices of the joined cells and faces
+    std::vector<std::vector<int>> jnFaces; // contains the nJnPr vectors containing the indices of the joined cells and faces
     matrix* qSnd=nullptr; matrix* qRcv=nullptr;
     matrix* qASnd=nullptr; matrix* qARcv=nullptr;
     matrix* fSnd=nullptr; matrix* fRcv=nullptr;
-    bool newJ; longMatrix jn;
+    bool newJ; intMatrix jn;
     int Npq2;
-    for (long iC=0; iC<nCells; iC++)
+    for (int iC=0; iC<nCells; iC++)
     {
         jn=e[iC].getJoin();
         Npq2=e[iC].nQuadPoints();
@@ -149,11 +149,11 @@ int main(int argc, char** argv)
     {
         if (myRank<jnPr[i]) // if the present process rank is lower than the joined one
         {
-            MPI_Isend(jnFaces[i].data(),jnFaces[i].size(),MPI_LONG,jnPr[i],1,MPI_COMM_WORLD,&rqs[i]); // the linking indices are sent
+            MPI_Isend(jnFaces[i].data(),jnFaces[i].size(),MPI_INT,jnPr[i],1,MPI_COMM_WORLD,&rqs[i]); // the linking indices are sent
         }
         else // if the present process rank is larger than the joined one
         {
-            MPI_Irecv(jnFaces[i].data(),jnFaces[i].size(),MPI_LONG,jnPr[i],1,MPI_COMM_WORLD,&rqs[i]); // the linking indices are received
+            MPI_Irecv(jnFaces[i].data(),jnFaces[i].size(),MPI_INT,jnPr[i],1,MPI_COMM_WORLD,&rqs[i]); // the linking indices are received
         }
     }
     MPI_Waitall(nJnPr,rqs,MPI_STATUSES_IGNORE);
@@ -171,7 +171,7 @@ int main(int argc, char** argv)
             }
         }
     }
-    std::vector<std::vector<long>>().swap(jnFaces);
+    std::vector<std::vector<int>>().swap(jnFaces);
 //
     initialConditions(caseName,nCells,e,glb,myRank);
     matrix H;
@@ -200,7 +200,7 @@ int main(int argc, char** argv)
            if ((ii==0)&&(i % glb.ctr[4]==0)){dmpH=true;} else {dmpH=false;}
 // compute (for all elements) conservative and auxiliary (primitive) variables on side quadrature points
 #pragma omp parallel for schedule(static)
-            for (long iC=0; iC<nCells; iC++)
+            for (int iC=0; iC<nCells; iC++)
             {
                 e[iC].step_0(BC,myRank,qSnd,qASnd); // computes conservative and auxiliary (primitive) variables on side quadrature points
             }
@@ -215,7 +215,7 @@ int main(int argc, char** argv)
     MPI_Barrier(MPI_COMM_WORLD);   
 
 #pragma omp parallel for schedule(static)
-            for (long iC=0; iC<nCells; iC++)
+            for (int iC=0; iC<nCells; iC++)
             {
                 e[iC].step_I(glb.dt,ii,caseName,e,BC,&dmpH,myRank,qARcv,fSnd); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
                 // then updates the conservative variable modal amplitude making a time substep (with volume integrals only)
@@ -231,7 +231,7 @@ int main(int argc, char** argv)
     MPI_Barrier(MPI_COMM_WORLD);
 
 #pragma omp parallel for schedule(static)
-            for (long iC=0; iC<nCells; iC++)
+            for (int iC=0; iC<nCells; iC++)
             {
                 e[iC].step_II(glb.dt,ii,e,dmpR,myRank,qRcv,fRcv); // completes the substep adding surface integral
             }
@@ -243,7 +243,7 @@ int main(int argc, char** argv)
         if (dmpR)
         {
             double residual=0., totResidual, eCFL, maxCFL=0., maxMaxCFL;
-            for (long iC=0; iC<nCells; iC++)
+            for (int iC=0; iC<nCells; iC++)
             {
                 residual+=std::abs(e[iC].getResidual());
                 eCFL=e[iC].CFL(glb.dt);
@@ -262,7 +262,7 @@ int main(int argc, char** argv)
         if (i % glb.ctr[4]==0)
         {
             H=e[0].getHist();
-            for (long iC=1; iC<nCells; iC++)
+            for (int iC=1; iC<nCells; iC++)
             {
                H+=e[iC].getHist();
             }

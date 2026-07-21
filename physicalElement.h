@@ -27,14 +27,14 @@ class physicalElement
 // constructors/destructor declarations
         physicalElement();
 // public methods declarations
-        void init(int my, computationalElement *c, vector3D x[], long iV[], longMatrix l, const global& g);
+        void init(int my, computationalElement *c, vector3D x[], int iV[], intMatrix l, const global& g);
         double CFL(double dt);
         void convFlux(matrix cF[], double rho, double rhoU, double rhoV, double rhoW, double E);
         void convFluxes(matrix flxq[], matrix* qq);
         void convFluxes(int iS);
         double getAM(int i, int eq);
         matrix getHist();
-        longMatrix getJoin();
+        intMatrix getJoin();
         double getQAS(int i, int eq);
         matrix getQAS(int i);
         double getQP(int i, int eq);
@@ -54,7 +54,7 @@ class physicalElement
         void setAM(int i, int eq, double a);
         void setBC(int iS);
         void setIniCond(std::string caseName);
-        void setJoin(int i, int j, long k);
+        void setJoin(int i, int j, int k);
 //        void step_0(boundaryCondition BC[]);
         void step_0(boundaryCondition BC[], int myRank, matrix qSnd[], matrix qASnd[]);
         void step_I(double dt, int m, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH, int myRank, matrix qARcv[], matrix fSnd[]);
@@ -68,7 +68,7 @@ class physicalElement
     private:
 // private variable declarations
         bool BS[4];
-        long mySelf;
+        int mySelf;
         int N, Nm, NmF, Npq, Npq2;
         int iVer[4];
         double J, JS[4], d, dF, h, res;
@@ -76,7 +76,7 @@ class physicalElement
         vector3D* x0;
         matrix flxS;
         matrix H;
-        longMatrix join;
+        intMatrix join;
         vector3D x_r, x_s, x_t, r_x, r_y, r_z;
         matrix qS, qAuxS;
         matrix A, KA, A_0, B;

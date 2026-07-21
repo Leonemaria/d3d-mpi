@@ -1,10 +1,10 @@
 //inputOutput.cpp
 #include "inputOutput.h"
-void initialConditions(std::string caseName, long nCells, physicalElement e[], const global& glb, int rank)  // set initial conditions
+void initialConditions(std::string caseName, int nCells, physicalElement e[], const global& glb, int rank)  // set initial conditions
 {
     if (glb.ctr[0]==0)
     {
-        for (long iC=0; iC<nCells; iC++)
+        for (int iC=0; iC<nCells; iC++)
         {
             e[iC].setIniCond(caseName);
         }
@@ -14,7 +14,7 @@ void initialConditions(std::string caseName, long nCells, physicalElement e[], c
         double aM; std::string st=std::to_string(glb.ctr[0]); std::string process=std::to_string(rank);
         std::string s="./"+caseName+"/output/result_pr"+process+"_it"+st+".dat"; std::ifstream fin(s); chk(fin,s); 
 	skipLine(fin, 1); int Nm;
-        for (long iC=0; iC<nCells; iC++)
+        for (int iC=0; iC<nCells; iC++)
         {
             skipLine(fin, 1);
             Nm=nModes(glb.sch[0]);
@@ -53,16 +53,16 @@ void readRun(std::ifstream &fin, global& glb)
     fin >> glb.sch[3];                        // source terms flag
 
 }
-double readMesh(std::ifstream &fin1, std::ifstream &fin2, long nNodes, vector3D xN[], long nCells, physicalElement e[], const global& glb, computationalElement *cc, int rank)
+double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D xN[], int nCells, physicalElement e[], const global& glb, computationalElement *cc, int rank)
 {
     double V=0.;
-    long iN=-1, iC=-1, iVer[4];
+    int iN=-1, iC=-1, iVer[4];
     while (iN<nNodes-1) // reading of the grid point list (the first part of mesh file)
     {
         fin1 >> iN >> xN[iN][0] >> xN[iN][1] >> xN[iN][2]; //grid point reading from mesh file (each point is labeled by a sequential number and is defined by three coordinates)
     }
-    longMatrix l(4,4); l.zero();
-    long i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15;
+    intMatrix l(4,4); l.zero();
+    int i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15;
     //reading link data:
     while (iC<nCells-1) // reading of the cell list (second part of the mesh file) and linkings (link file)
     {
@@ -88,7 +88,7 @@ double readMesh(std::ifstream &fin1, std::ifstream &fin2, long nNodes, vector3D 
     }
     return 4.*V/3.;  
 }
-void printOut(std::string caseName, physicalElement e[], long nCells, int it, const global& glb, int rank)
+void printOut(std::string caseName, physicalElement e[], int nCells, int it, const global& glb, int rank)
 {
     void subCellNodes(std::ofstream &fl, int p, int n0, int n1, int n2, int n3);
     std::string iterations=std::to_string(it); std::string process=std::to_string(rank);
@@ -96,7 +96,7 @@ void printOut(std::string caseName, physicalElement e[], long nCells, int it, co
     std::ofstream outputFileSol("./"+caseName+"/output/result_pr"+process+"_it"+iterations+".dat");
     outputFileSol << std::setprecision(16);
     outputFileSol << nCells*Nm << " " << glb.dt*it << std::endl;
-    for (long i=0; i<nCells; i++)
+    for (int i=0; i<nCells; i++)
     {
         outputFileSol << glb.sch[0] << std::endl;
         for (int k=0; k<Nm; k++)
