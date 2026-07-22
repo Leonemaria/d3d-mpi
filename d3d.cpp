@@ -68,18 +68,34 @@ int main(int argc, char** argv)
     MPI_Bcast(glb.sch,4,MPI_INT,0,MPI_COMM_WORLD);
     computationalElement cc(glb);
 //  input of boundary conditions
-    int nBC; std::string process=std::to_string(myRank);
-    s="./"+caseName+"/input/BC_pr"+process+".dat"; std::ifstream inputFileBC(s); chk(inputFileBC,s); // boundary conditions definition input file
-    inputFileBC >> nBC; nBC++; skipLine(inputFileBC, 1); // reading number of boundary conditions
-    boundaryCondition BC[nBC]; for (int i=1; i<nBC; i++) {BC[i].input(inputFileBC);}   
+    int nBC; std::ifstream inputFileBC;
+    if (myRank==0)
+    {
+        s="./"+caseName+"/input/BC.dat"; inputFileBC.open(s); chk(inputFileBC,s); // boundary conditions definition input file
+        inputFileBC >> nBC; nBC++; skipLine(inputFileBC, 1); // reading number of boundary conditions
+    }
+    MPI_Bcast(&nBC,1,MPI_INT,0,MPI_COMM_WORLD);  
+    boundaryCondition BC[nBC];
+    if (myRank==0)
+    {
+        for (int i=1; i<nBC; i++) {BC[i].input(inputFileBC);}
+    }
+    for (int i=1; i<nBC; i++)
+    {
+        MPI_Bcast(BC[i].intData(),1,MPI_INT,0,MPI_COMM_WORLD);  
+        MPI_Bcast(BC[i].doubleData(),10,MPI_INT,0,MPI_COMM_WORLD);        
+    }
 //***************************************
 //  input of geometry (points, elements, links and boundary conditions)
-    int nNodes, nCells, totCells=0;
+    int nNodes=0, nCells, totCells;
+    vector3D* xN=nullptr;
+    physicalElement* e=nullptr;
+    std::string process=std::to_string(myRank);
     s="./"+caseName+"/input/mesh_pr"+process+".dat"; std::ifstream inputFileMesh(s); chk(inputFileMesh,s); // mesh input files
     s="./"+caseName+"/input/link_pr"+process+".dat"; std::ifstream inputFileLink(s); chk(inputFileLink,s); // link input files
     inputFileMesh >> nNodes >> nCells; // reading number of grid points and number of physical cells
-    vector3D* xN=new vector3D[nNodes]; // grid point array    
-    physicalElement* e=new physicalElement[nCells]; // physical cells array    
+    xN=new vector3D[nNodes]; // grid point array    
+    e=new physicalElement[nCells]; // physical cells array    
     double volume=readMesh(inputFileMesh,inputFileLink,nNodes,xN,nCells,e,glb,&cc,myRank);
     inputFileMesh.close(); inputFileLink.close();
     double totVolume=0.;

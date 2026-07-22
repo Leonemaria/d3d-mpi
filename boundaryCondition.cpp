@@ -39,3 +39,14 @@ void boundaryCondition::input(std::ifstream &iFile)
     }
     skipLine(iFile, 1);
 }
+double* boundaryCondition::doubleData()
+{
+    return &qB[0];
+}
+int* boundaryCondition::intData()
+{
+    return &kind;
+}
+
+
+

@@ -20,6 +20,8 @@ class boundaryCondition
         int getKind();
         double getQ(int eq);
         void input(std::ifstream &iFile);
+        double* doubleData();
+        int* intData();
     private:
 // private variable declarations
         int kind; // number of equation, kind of condition

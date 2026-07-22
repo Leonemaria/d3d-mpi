@@ -2,6 +2,9 @@
 #include "computationalElement.h"
 
 // constructor of computationalElement
+computationalElement::computationalElement()
+{
+}
 computationalElement::computationalElement(const global& glb)
 {
 //

@@ -17,6 +17,7 @@ class computationalElement
 {
     public:
 // constructors/destructor declarations
+        computationalElement();
         computationalElement(const global& glb);
         ~computationalElement();
 // public methods declarations
