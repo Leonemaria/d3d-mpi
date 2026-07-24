@@ -64,6 +64,14 @@ vector2D vector2D::operator-()
 {
     return (*this)*(-1);
 }
+void vector2D::operator-=(const vector2D& v)
+{
+    a[0]-=v.a[0]; a[1]-=v.a[1];
+}
+void vector2D::operator+=(const vector2D& v)
+{
+    a[0]+=v.a[0]; a[1]+=v.a[1];
+}
 void vector2D::print() const
 {
     std::cout << a[0] << "  " << a[1] << std::endl;
@@ -145,6 +153,14 @@ double& vector3D::operator[](int i)
 vector3D vector3D::operator-()
 {
     return (*this)*(-1);
+}
+void vector3D::operator-=(const vector3D& v)
+{
+    a[0]-=v.a[0]; a[1]-=v.a[1]; a[2]-=v.a[2];
+}
+void vector3D::operator+=(const vector3D& v)
+{
+    a[0]+=v.a[0]; a[1]+=v.a[1]; a[2]+=v.a[2];
 }
 void vector3D::print() const
 {

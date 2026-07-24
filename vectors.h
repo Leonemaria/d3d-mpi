@@ -24,6 +24,8 @@ class vector2D
         double operator[](int i) const;
         double& operator[](int i);
         vector2D operator-();
+        void operator-=(const vector2D& v);
+        void operator+=(const vector2D& v);
         void print() const;
     private:
         double a[2];
@@ -47,6 +49,8 @@ class vector3D
         double operator[](int i) const;
         double& operator[](int i);
         vector3D operator-();
+        void operator-=(const vector3D& v);
+        void operator+=(const vector3D& v);
         void print() const;
     private:
         double a[3];
