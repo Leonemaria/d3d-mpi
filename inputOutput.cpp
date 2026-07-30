@@ -11,21 +11,17 @@ void initialConditions(std::string caseName, int nCells, physicalElement e[], co
     }
     else
     {
-        double aM; std::string st=std::to_string(glb.ctr[0]); std::string process=std::to_string(rank);
-        std::string s="./"+caseName+"/output/result_pr"+process+"_it"+st+".dat"; std::ifstream fin(s); chk(fin,s); 
-	skipLine(fin, 1); int Nm;
+        double* aM; std::string st=std::to_string(glb.ctr[0]); std::string process=std::to_string(rank);
+        std::string s="./"+caseName+"/output/result_pr"+process+"_it"+st+".dat"; std::ifstream fin(s,std::ios::binary); chk(fin,s); 
+        fin.seekg(sizeof(int)+sizeof(double), std::ios::cur);
+	int N;
         for (int iC=0; iC<nCells; iC++)
         {
-            skipLine(fin, 1);
-            Nm=nModes(glb.sch[0]);
-            for (int iM=0; iM<Nm; iM++)
+            fin.read(reinterpret_cast<char*>(&N), sizeof(int));
+            aM=e[iC].toAM();
+            for (int iA=0; iA<nModes(N)*nEq; iA++)
             {
-                for (int eq=0; eq<nEq; eq++)
-                {
-                    fin >> aM;
-                    e[iC].setAM(iM,eq,aM);
-                }
-                skipLine(fin,1);
+                    fin.read(reinterpret_cast<char*>(aM+iA), sizeof(double));
             }
         }
     }
@@ -93,15 +89,18 @@ void printOut(std::string caseName, physicalElement e[], int nCells, int it, con
     void subCellNodes(std::ofstream &fl, int p, int n0, int n1, int n2, int n3);
     std::string iterations=std::to_string(it); std::string process=std::to_string(rank);
     int Nm=nModes(glb.sch[0]);
-    std::ofstream outputFileSol("./"+caseName+"/output/result_pr"+process+"_it"+iterations+".dat");
-    outputFileSol << std::setprecision(16);
-    outputFileSol << nCells*Nm << " " << glb.dt*it << std::endl;
+    std::ofstream outputFileSol("./"+caseName+"/output/result_pr"+process+"_it"+iterations+".dat",std::ios::binary);
+    int nData=nCells*Nm; double time=glb.dt*it;
+    outputFileSol.write(reinterpret_cast<const char*>(&nData), sizeof(int));
+    outputFileSol.write(reinterpret_cast<const char*>(&time), sizeof(double));
+    double* aM; int N=glb.sch[0];
     for (int i=0; i<nCells; i++)
     {
-        outputFileSol << glb.sch[0] << std::endl;
-        for (int k=0; k<Nm; k++)
+        outputFileSol.write(reinterpret_cast<const char*>(&N), sizeof(int));
+        aM=e[i].toAM();
+        for (int iA=0; iA<Nm*nEq; iA++)
         {
-            outputFileSol << e[i].getAM(k,0) << " " << e[i].getAM(k,1) << " " << e[i].getAM(k,2) << " " << e[i].getAM(k,3) << " " << e[i].getAM(k,4) << std::endl;            
+            outputFileSol.write(reinterpret_cast<const char*>(aM+iA), sizeof(double));
         }
     }
 }

@@ -466,6 +466,10 @@ void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, 
     (*cE).step_IIb(dt,m,&KA,&A,&A_0,&numFlx); //computation of mode amplitude of condervative variables (addition of surface integral)
     if (dmpR) {res=integral((*cE).getPHI()*(A.col(0)-A_0.col(0)));}
 }
+double* physicalElement::toAM()
+{
+    return A.data();
+}
 void physicalElement::viscousFlux(matrix vF[], double u, double v, double w, symTensor tau, vector3D heat)
 {
     vF[0].set(0,0.); vF[1].set(0,0.); vF[2].set(0,0.);
