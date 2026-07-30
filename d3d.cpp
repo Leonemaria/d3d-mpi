@@ -16,20 +16,19 @@
 #include "cases.h"
 #include "global.h"
 //
-int main(int argc, char** argv)
+int main(int argc, char* argv[])
 {
-//    int provided;
-//    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
-    MPI_Init(&argc, &argv);
-    int commSize;
-    MPI_Comm_size(MPI_COMM_WORLD, &commSize);
+    int prov;
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &prov);
+    int Nth = std::atoi(argv[1]);
+    omp_set_num_threads(Nth);
     int myRank;
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 // Header
     if (myRank==0) {std::cout << "*** d3d START ***\n";}
 // input of computational ambient data
     global glb;
-    std::string caseName, s; int Nth;
+    std::string caseName, s;
     int nameSize;
     if (myRank==0)
     {
