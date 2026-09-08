@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
     }
 //***************************************
 //  input of geometry (points, elements, links and boundary conditions)
-    int nNodes=0, nCells, totCells;
+    unsigned int nNodes, nCells, totCells;
     vector3D* xN=nullptr;
     physicalElement* e=nullptr;
     std::string process=std::to_string(myRank);
