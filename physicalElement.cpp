@@ -684,8 +684,40 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
             }
         }
         break;
+        case 11: // Weak-Riemann farfield (inlet/outlet) condition (Mengaldo et al. 2014) 
+        {
+        // The assigned values are: rho=qB[0], p=qB[5], u=qB[6], v=qB[7], w=qB[8]
+            double mu, k, u, v, w, T, ggm1=gam/(gam-1.);
+            symTensor Sr, tau; vector3D gradT, heat;
+            matrix qInt(1,nEq); matrix qExt(1,nEq);
+            matrix bF[3]; bF[0].dim(1,nEq); bF[1].dim(1,nEq); bF[2].dim(1,nEq);
+            for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+            {
+                qInt=qS.row(i);
+                qExt.set(0,0,(*BC).getQ(0)); // external density equal to farfield value
+                qExt.set(0,1,(*BC).getQ(6)*qExt.get(0)); // x momentum external value (equal to farfield value)
+                qExt.set(0,2,(*BC).getQ(7)*qExt.get(0)); // y momentum external value (equal to farfield value)
+                qExt.set(0,3,(*BC).getQ(8)*qExt.get(0)); // z momentum external value (equal to farfield value)
+                qExt.set(0,4,energy(qExt.get(0),qExt.get(1),qExt.get(2),qExt.get(3),(*BC).getQ(5))); // external energy  (equal to farfield value)
+                //
+                flxS.set(i,0,HLL(iS,qInt,qExt));
+                if ((*BC).getQ(6)*n[iS][0]+(*BC).getQ(7)*n[iS][1]+(*BC).getQ(8)*n[iS][2]>0) // if it is an outlet
+                {                   
+                    u=qAuxS.get(i,0); v=qAuxS.get(i,1); w=qAuxS.get(i,2); T=qAuxS.get(i,3);
+                    Sr=strainRate((*dx).row(i),(*dy).row(i),(*dz).row(i));
+                    mu=Sutherland(T,S,Re); k=mu/Pr;
+                    gradT.set((*dx).get(i,3),(*dy).get(i,3),(*dz).get(i,3));
+                    tau=mu*Sr.noTrace();
+                    heat=-k*ggm1*gradT;
+                    viscousFlux(bF,u,v,w,tau,heat);
+                    flxS.add(i,0,bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2]);
+                }
+            }
+        }
+        break;
         case 21: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014)
         {
+        // The assigned values are: u=qB[6], v=qB[7], w=qB[8], T=qB[9] (T is not use here but in the gradient equation)
             double mu, k, u, v, w, T, ggm1=gam/(gam-1.);
             symTensor Sr, tau; vector3D gradT, heat;
             matrix qInt(1,nEq); matrix qExt(1,nEq); matrix flxInt; matrix flxExt;
@@ -716,6 +748,7 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
         break;
         case 22: // weak-Riemann no-slip adiabatic condition (Mengaldo et al. 2014)
         {
+        // The assigned values are: u=qB[6], v=qB[7], w=qB[8]
             double mu, k, u, v, w, T, ggm1=gam/(gam-1.);
             symTensor Sr, tau; vector3D gradT, heat;
             matrix qInt(1,nEq); matrix qExt(1,nEq); matrix flxInt; matrix flxExt;
