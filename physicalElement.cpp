@@ -698,7 +698,7 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 qExt.set(0,1,(*BC).getQ(6)*qExt.get(0)); // x momentum external value (equal to farfield value)
                 qExt.set(0,2,(*BC).getQ(7)*qExt.get(0)); // y momentum external value (equal to farfield value)
                 qExt.set(0,3,(*BC).getQ(8)*qExt.get(0)); // z momentum external value (equal to farfield value)
-                qExt.set(0,4,energy(qExt.get(0),qExt.get(1),qExt.get(2),qExt.get(3),(*BC).getQ(5))); // external energy  (equal to farfield value)
+                qExt.set(0,4,energy(qExt.get(0),qExt.get(1),qExt.get(2),qExt.get(3),(*BC).getQ(5),gam,Ma)); // external energy  (equal to farfield value)
                 //
                 flxS.set(i,0,HLL(iS,qInt,qExt));
                 if ((*BC).getQ(6)*n[iS][0]+(*BC).getQ(7)*n[iS][1]+(*BC).getQ(8)*n[iS][2]>0) // if it is an outlet
