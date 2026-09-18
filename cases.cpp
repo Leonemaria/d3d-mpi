@@ -19,6 +19,15 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q, double gam, dou
         u=2./3.;
         E=energy(rho,rho*u,rho*v,rho*w,p,gam,Ma);
     }
+    if (caseName=="cylinder") // flow around a cylinder of diameter D=1
+    {
+        double r4;
+        r4=sq(sq(x[0])+sq(x[1]));
+        u=1.+(sq(x[1])-sq(x[0]))/r4;
+        v=-2.*x[0]*x[1]/r4;;
+        p=1.;
+        E=energy(rho,rho*u,rho*v,rho*w,p,gam,Ma);
+    }
     if (caseName=="taylorgreen")
     {
         p=1.+gam*sq(Ma)*(cos(2.*x[1])+cos(2.*x[0]))*(cos(2.*x[2])+2.)/16.;
@@ -114,6 +123,15 @@ matrix varHist(std::string caseName, computationalElement* cE, double d, double 
         }
     }
     if (caseName=="poiseuille")
+    {
+       var.dim(Np,1);
+       for (int i=0; i<Np; i++)
+        {
+            u=(*qA).get(i,0);
+            var.set(i,0,u);
+        }
+    }
+    if (caseName=="cylinder")
     {
        var.dim(Np,1);
        for (int i=0; i<Np; i++)
