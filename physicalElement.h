@@ -44,6 +44,7 @@ class physicalElement
         matrix getFlxS(int i);
         vector3D getX(vector3D rP);
         matrix HLL(int iS, matrix qInt, matrix qExt);
+        matrix HLLC(int iS, matrix qInt, matrix qExt);
         double integral(matrix m);
         matrix integralM(matrix m);
         double Jacobian();

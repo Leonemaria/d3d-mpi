@@ -53,7 +53,7 @@ void physicalElement::init(int my, computationalElement *c, vector3D x[], int iV
     qS.dim(4*Npq2,nEq); // dimensioning of the matrices containing the conservative variables interpolated over the face quadrature points
     qAuxS.dim(4*Npq2,nAux); // dimensioning of the matrices containing the auxiliary variables interpolated over the face quadrature points
     //
-    if (CIF==1)
+    if (CIF>0)
     {
         vector3D ey, ez, eY(0.,1.,0.), eZ(0.,0.,1.);
         for (int i=0; i<4; i++)
@@ -201,6 +201,65 @@ matrix physicalElement::HLL(int iS, matrix qInt, matrix qExt)
     }            
     flxHLL.set(0,1,flxHLL.part(0,1,1,3)*invRot[iS]); // convective numerical fluxes times side Jacobian (Mengaldo et al. 2014, p.28)
     return flxHLL;
+}
+matrix physicalElement::HLLC(int iS, matrix qInt, matrix qExt)
+// HLL approximated Riemann solver for intercell/boundary convective fluxes
+// (Toro 1997, p.301; Mengaldo et al. 2014, p.28 and 32-33)
+{
+    matrix flxHLL(1,5);
+    double pInt=pressure(&qInt,gam,Ma), pExt=pressure(&qExt,gam,Ma);
+    double cInt=soundSpeed(&qInt,gam,Ma), cExt=soundSpeed(&qExt,gam,Ma);
+    qExt.set(0,1,qExt.part(0,1,1,3)*rot[iS]); qInt.set(0,1,qInt.part(0,1,1,3)*rot[iS]);
+    double rhoI=qInt.get(0), rhoUI=qInt.get(1), rhoE=qExt.get(0), rhoUE=qExt.get(1);
+    double uI=rhoUI/rhoI, vI=qInt.get(2)/rhoI, wI=qInt.get(3)/rhoI, EI=qInt.get(4);
+    double uE=rhoUE/rhoE, vE=qExt.get(2)/rhoE, wE=qExt.get(3)/rhoE, EE=qExt.get(4);
+    double SInt=uI-cInt, SExt=uE+cExt; // wave propagation speeds (Toro 1997, p.302)
+    
+    if (SInt>0)
+    {
+        flxHLL.set(0,rhoUI);
+        flxHLL.set(1,rhoUI*uI+pInt/gaM2);
+        flxHLL.set(2,rhoUI*vI);
+        flxHLL.set(3,rhoUI*wI);
+        flxHLL.set(4,uE*(EI+pInt));
+    }
+    else
+    {
+        if (SExt<0)
+        {
+            flxHLL.set(0,rhoUE);
+            flxHLL.set(1,rhoUE*uE+pExt/gaM2);
+            flxHLL.set(2,rhoUE*vE);
+            flxHLL.set(3,rhoUE*wE);
+            flxHLL.set(4,uE*(EE+pExt));
+        }
+        else
+        {
+            double SM=((pExt-pInt)/gaM2+rhoUI*(SInt-uI)-rhoUE*(SExt-uE))/(rhoI*(SInt-uI)-rhoE*(SExt-uE)); // middle wave speed (Toro 1997, p.305)
+            if (SM>=0.)
+            {
+                double dS=SInt-SM; double C0=(SInt-uI)/dS;
+                flxHLL.set(0,rhoUI+SInt*(C0*rhoI-rhoI));
+                flxHLL.set(1,rhoUI*uI+pInt/gaM2+SInt*(C0*rhoI*SM-rhoUI));
+//                flxHLL.set(1,rhoUI*uI+pInt/gaM2+SInt*(C0*rhoI*uI-rhoUI));
+                flxHLL.set(2,rhoUI*vI+SInt*(C0*rhoI*vI-rhoI*vI));
+                flxHLL.set(3,rhoUI*wI+SInt*(C0*rhoI*wI-rhoI*wI));
+                flxHLL.set(4,uI*(EI+pInt)+SInt*(C0*rhoI*(EI/rhoI+(SM-uI)*(SM*gaM2+pInt/(rhoI*(SInt-uI))))-EI));
+            }
+            else
+            {
+                double dS=SExt-SM; double C0=(SExt-uE)/dS;
+                flxHLL.set(0,rhoUE+SExt*(C0*rhoE-rhoE));
+                flxHLL.set(1,rhoUE*uE+pExt/gaM2+SExt*(C0*rhoE*SM-rhoUE));
+//                flxHLL.set(1,rhoUE*uE+pExt/gaM2+SExt*(C0*rhoE*uE-rhoUE));
+                flxHLL.set(2,rhoUE*vE+SExt*(C0*rhoE*vE-rhoE*vE));
+                flxHLL.set(3,rhoUE*wE+SExt*(C0*rhoE*wE-rhoE*wE));
+                flxHLL.set(4,uE*(EE+pExt)+SExt*(C0*rhoE*(EE/rhoE+(SM-uE)*(SM*gaM2+pExt/(rhoE*(SExt-uE))))-EE));
+            }       
+        }
+    }            
+    flxHLL.set(0,1,flxHLL.part(0,1,1,3)*invRot[iS]);
+    return flxHLL; // convective numerical fluxes times side Jacobian
 }
 double physicalElement::integral(matrix m)
 {
@@ -456,6 +515,13 @@ void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, 
                             numFlx.set(i,0,JS[iS]*(0.5*(flxS.row(i)-(*eJ).getFlxS(iExt))+HLL(iS,qS.row(i),(*eJ).getQS(iExt)))); //  numerical flux times face Jacobian
                         }
                     break;
+                    case 2: // HLLC+BR1
+                        for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+                        {
+                            iExt=(*cE).extIndex(i%Npq2,join.get(iS,3))+join.get(iS,2)*Npq2; // index of the point on the connected element side
+                            numFlx.set(i,0,JS[iS]*(0.5*(flxS.row(i)-(*eJ).getFlxS(iExt))+HLLC(iS,qS.row(i),(*eJ).getQS(iExt)))); //  numerical flux times face Jacobian
+                        }
+                    break;
                 }
             }
             else
@@ -478,6 +544,13 @@ void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, 
                         {
                             iExt=(*cE).extIndex(i%Npq2,join.get(iS,3)); // index of the point on the connected element side
                             numFlx.set(i,0,JS[iS]*(0.5*(flxS.row(i)-fRcv[jPr].row(jFc*Npq2+iExt))+HLL(iS,qS.row(i),qRcv[jPr].row(jFc*Npq2+iExt)))); //  numerical flux times face Jacobian
+                        }
+                    break;
+                    case 2: // HLLC+BR1
+                        for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
+                        {
+                            iExt=(*cE).extIndex(i%Npq2,join.get(iS,3)); // index of the point on the connected element side
+                            numFlx.set(i,0,JS[iS]*(0.5*(flxS.row(i)-fRcv[jPr].row(jFc*Npq2+iExt))+HLLC(iS,qS.row(i),qRcv[jPr].row(jFc*Npq2+iExt)))); //  numerical flux times face Jacobian
                         }
                     break;
                 }
@@ -786,6 +859,11 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                     case 1: // HLL
                     {
                         flxS.set(i,0,HLL(iS,qInt,qExt));                       
+                    }
+                    break;
+                    case 2: // HLLC
+                    {
+                        flxS.set(i,0,HLLC(iS,qInt,qExt));                       
                     }
                     break;
                 }
