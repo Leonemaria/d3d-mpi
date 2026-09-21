@@ -21,10 +21,13 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q, double gam, dou
     }
     if (caseName=="cylinder") // flow around a cylinder of diameter D=1
     {
-        double r4;
-        r4=sq(sq(x[0])+sq(x[1]));
-        u=1.+(sq(x[1])-sq(x[0]))/r4;
-        v=-2.*x[0]*x[1]/r4;;
+        double sinTh, cosTh, r, u_r, u_t;
+        r=std::sqrt(sq(x[0])+sq(x[1]));
+        sinTh=x[1]/r; cosTh=x[0]/r;
+        u_r=(1.-1./sq(r))*cosTh;
+        u_t=-(1.+1./sq(r))*sinTh+0.2/sq(r);
+        u=u_r*cosTh-u_t*sinTh;
+        v=u_r*sinTh+u_t*cosTh;
         p=1.;
         E=energy(rho,rho*u,rho*v,rho*w,p,gam,Ma);
     }

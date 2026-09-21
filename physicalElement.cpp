@@ -161,25 +161,46 @@ vector3D physicalElement::getX(vector3D rP)
     return (-(rP[0]+rP[1]+rP[2]+1.)*(*(x0+iVer[0]))+(rP[0]+1.)*(*(x0+iVer[1]))+(rP[1]+1.)*(*(x0+iVer[2]))+(rP[2]+1.)*(*(x0+iVer[3])))/2.;
 }
 matrix physicalElement::HLL(int iS, matrix qInt, matrix qExt)
-// HLL (Mengaldo et al. 2014): approximated Riemann solver for intercell/boundary convective fluxes
+// HLL approximated Riemann solver for intercell/boundary convective fluxes // (Toro 1997, p.297)
 {
     matrix flxHLL(1,5);
     double pInt=pressure(&qInt,gam,Ma), pExt=pressure(&qExt,gam,Ma);
     double cInt=soundSpeed(&qInt,gam,Ma), cExt=soundSpeed(&qExt,gam,Ma);
-    qExt.set(0,1,qExt.part(0,1,1,3)*rot[iS]); qInt.set(0,1,qInt.part(0,1,1,3)*rot[iS]);
+    qExt.set(0,1,qExt.part(0,1,1,3)*rot[iS]); qInt.set(0,1,qInt.part(0,1,1,3)*rot[iS]); // local ref. rotation (Mengaldo et al. 2014, p.28)
     double rhoI=qInt.get(0), rhoUI=qInt.get(1), rhoE=qExt.get(0), rhoUE=qExt.get(1);
     double uI=rhoUI/rhoI, vI=qInt.get(2)/rhoI, wI=qInt.get(3)/rhoI, EI=qInt.get(4);
     double uE=rhoUE/rhoE, vE=qExt.get(2)/rhoE, wE=qExt.get(3)/rhoE, EE=qExt.get(4);
-    double SInt=std::min(0.,uI-cInt), SExt=std::max(0.,uE+cExt); // wave propagation speeds (Toro 1997)
-    double dS=SExt-SInt; double C0=SExt/dS, C1=-SInt/dS, C2=SInt*SExt/dS;
-    flxHLL.set(0,C0*qInt.get(1)+C1*qExt.get(1)+C2*(rhoE-rhoI));
-    flxHLL.set(1,C0*(rhoUI*uI+pInt/gaM2)+C1*(rhoUE*uE+pExt/gaM2)+C2*(rhoUE-rhoUI));
-    flxHLL.set(2,C0*rhoUI*vI+C1*rhoUE*vE+C2*(rhoE*vE-rhoI*vI));
-    flxHLL.set(3,C0*rhoUI*wI+C1*rhoUE*wE+C2*(rhoE*wE-rhoI*wI));
-    flxHLL.set(4,C0*uI*(EI+pInt)+C1*uE*(EE+pExt)+C2*(EE-EI));
-    flxHLL.set(0,1,flxHLL.part(0,1,1,3)*invRot[iS]);
-    return flxHLL; // convective numerical fluxes times side Jacobian
-
+    double SInt=uI-cInt, SExt=uE+cExt; // wave propagation speeds (Toro 1997, p.302)
+    if (SInt>0)
+    {
+        flxHLL.set(0,rhoUI);
+        flxHLL.set(1,rhoUI*uI+pInt/gaM2);
+        flxHLL.set(2,rhoUI*vI);
+        flxHLL.set(3,rhoUI*wI);
+        flxHLL.set(4,uE*(EI+pInt));
+    }
+    else
+    {
+        if (SExt<0)
+        {
+            flxHLL.set(0,rhoUE);
+            flxHLL.set(1,rhoUE*uE+pExt/gaM2);
+            flxHLL.set(2,rhoUE*vE);
+            flxHLL.set(3,rhoUE*wE);
+            flxHLL.set(4,uE*(EE+pExt));
+        }
+        else
+        {
+            double dS=SExt-SInt; double C0=SExt/dS, C1=-SInt/dS, C2=SInt*SExt/dS;
+            flxHLL.set(0,C0*qInt.get(1)+C1*qExt.get(1)+C2*(rhoE-rhoI));
+            flxHLL.set(1,C0*(rhoUI*uI+pInt/gaM2)+C1*(rhoUE*uE+pExt/gaM2)+C2*(rhoUE-rhoUI));
+            flxHLL.set(2,C0*rhoUI*vI+C1*rhoUE*vE+C2*(rhoE*vE-rhoI*vI));
+            flxHLL.set(3,C0*rhoUI*wI+C1*rhoUE*wE+C2*(rhoE*wE-rhoI*wI));
+            flxHLL.set(4,C0*uI*(EI+pInt)+C1*uE*(EE+pExt)+C2*(EE-EI));        
+        }
+    }            
+    flxHLL.set(0,1,flxHLL.part(0,1,1,3)*invRot[iS]); // convective numerical fluxes times side Jacobian (Mengaldo et al. 2014, p.28)
+    return flxHLL;
 }
 double physicalElement::integral(matrix m)
 {
@@ -684,7 +705,7 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
             }
         }
         break;
-        case 11: // Weak-Riemann farfield (inlet/outlet) condition (Mengaldo et al. 2014) 
+        case 11: // Weak-Riemann farfield condition (Mengaldo et al. 2014) 
         {
         // The assigned values are: rho=qB[0], p=qB[5], u=qB[6], v=qB[7], w=qB[8]
             double mu, k, u, v, w, T, ggm1=gam/(gam-1.);
@@ -701,17 +722,6 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 qExt.set(0,4,energy(qExt.get(0),qExt.get(1),qExt.get(2),qExt.get(3),(*BC).getQ(5),gam,Ma)); // external energy  (equal to farfield value)
                 //
                 flxS.set(i,0,HLL(iS,qInt,qExt));
-                if ((*BC).getQ(6)*n[iS][0]+(*BC).getQ(7)*n[iS][1]+(*BC).getQ(8)*n[iS][2]>0) // if it is an outlet
-                {                   
-                    u=qAuxS.get(i,0); v=qAuxS.get(i,1); w=qAuxS.get(i,2); T=qAuxS.get(i,3);
-                    Sr=strainRate((*dx).row(i),(*dy).row(i),(*dz).row(i));
-                    mu=Sutherland(T,S,Re); k=mu/Pr;
-                    gradT.set((*dx).get(i,3),(*dy).get(i,3),(*dz).get(i,3));
-                    tau=mu*Sr.noTrace();
-                    heat=-k*ggm1*gradT;
-                    viscousFlux(bF,u,v,w,tau,heat);
-                    flxS.add(i,0,bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2]);
-                }
             }
         }
         break;
