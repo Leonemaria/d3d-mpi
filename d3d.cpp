@@ -95,7 +95,7 @@ int main(int argc, char* argv[])
     inputFileMesh >> nNodes >> nCells; // reading number of grid points and number of physical cells
     xN=new vector3D[nNodes]; // grid point array    
     e=new physicalElement[nCells]; // physical cells array    
-    double volume=readMesh(inputFileMesh,inputFileLink,nNodes,xN,nCells,e,glb,&cc,myRank);
+    double volume=readMesh(inputFileMesh,inputFileLink,nNodes,xN,nCells,e,glb,&cc,BC,myRank);
     inputFileMesh.close(); inputFileLink.close();
     double totVolume=0.;
     MPI_Reduce(&volume, &totVolume, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // initialization    

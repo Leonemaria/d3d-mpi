@@ -27,7 +27,7 @@ class physicalElement
 // constructors/destructor declarations
         physicalElement();
 // public methods declarations
-        void init(int my, computationalElement *c, vector3D x[], int iV[], intMatrix l, const global& g);
+        void init(int my, computationalElement *c, vector3D x[], int iV[], intMatrix l, const global& g, boundaryCondition BC[], int myRank);
         double CFL(double dt);
         void convFlux(matrix cF[], double rho, double rhoU, double rhoV, double rhoW, double E);
         void convFluxes(matrix flxq[], matrix* qq);

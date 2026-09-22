@@ -49,7 +49,7 @@ void readRun(std::ifstream &fin, global& glb)
     fin >> glb.sch[3];                        // source terms flag
 
 }
-double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D xN[], int nCells, physicalElement e[], const global& glb, computationalElement *cc, int rank)
+double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D xN[], int nCells, physicalElement e[], const global& glb, computationalElement *cc, boundaryCondition BC[], int rank)
 {
     double V=0.;
     int iN=-1, iC=-1, iVer[4];
@@ -75,11 +75,7 @@ double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D x
         // the link matrix is a 4x4 matrix with a row for each cell face where the first element is the indices of the connected processor
         // the second one is the index of the linked cell, the third one is the indices of the linked side
         // and the fourth is the index of the point linked to 0 point (or the boundary contition)
-        e[iC].init(iC,cc,&xN[0],iVer,l,glb); // physical cell initialization
-        for (int iS=0; iS<4; iS++)
-        {
-            if ((l.get(iS,0)==rank)&(l.get(iS,1)==iC)&(l.get(iS,2)==iS)) {e[iC].setBC(iS);}            
-        }
+        e[iC].init(iC,cc,&xN[0],iVer,l,glb,BC,rank); // physical cell initialization
         V+=e[iC].Jacobian();
     }
     return 4.*V/3.;  

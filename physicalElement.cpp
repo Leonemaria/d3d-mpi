@@ -6,7 +6,7 @@ physicalElement::physicalElement()
 {
 }
 // methods
-void physicalElement::init(int my, computationalElement *c, vector3D x[], int iV[], intMatrix l, const global& glb)
+void physicalElement::init(int my, computationalElement *c, vector3D x[], int iV[], intMatrix l, const global& glb, boundaryCondition BC[], int myRank)
 {
     Ma=glb.phy[0]; Re=glb.phy[1]; Fr=glb.phy[2]; Pr=glb.phy[3]; gam=glb.phy[4]; S=glb.phy[5]; gaM2=gam*sq(Ma);
     N=glb.sch[0]; LES=glb.sch[1]; CIF=glb.sch[2]; src=glb.sch[3];
@@ -36,7 +36,7 @@ void physicalElement::init(int my, computationalElement *c, vector3D x[], int iV
     n[2]=(edge12.cross(edge13)).normalized();
     JS[3]=(edge02.cross(edge03)).norm()/(2.*J);
     n[3]=-(edge02.cross(edge03)).normalized();
-    h=std::pow(J*4./3.,1./3.); // lenght for CFL computation (Bakosi 2024)
+    h=std::pow(J*4./3.,1./3.); // lenght for CFL computation (Bakosi 2024, p.3 eq.17)
     d=std::pow(J*4./3./Nm,1./3.); // grid LES scale (Abba' et al. 2015)
     dF=std::pow(J*4./3./NmF,1./3.); // grid LES larger scale
     r_x[0]=(x_s[1]*x_t[2]-x_s[2]*x_t[1])/J;
@@ -76,6 +76,34 @@ void physicalElement::init(int my, computationalElement *c, vector3D x[], int iV
             rot[i]=rot[i].T();
             invRot[i]=invRot[i].T();   
         }
+    }
+    for (int iS=0; iS<4; iS++)
+    {
+        if ((l.get(iS,0)==myRank)&&(l.get(iS,1)==mySelf)&(l.get(iS,2)==iS))
+        {
+            setBC(iS);
+            if ((BC[join.get(iS,3)].getKind()==11)&&(rot[iS].size()==0))
+            {
+                vector3D ey, ez, eY(0.,1.,0.), eZ(0.,0.,1.);
+                if (std::abs(n[iS][1])>std::abs(n[iS][2]))
+                {
+                    ey=(eZ.cross(n[iS])).normalized();
+                    ez=(n[iS].cross(ey)).normalized();
+                }
+                else
+                {
+                    ez=(n[iS].cross(eY)).normalized();
+                    ey=(ez.cross(n[iS])).normalized();
+                }
+                rot[iS].dim(3,3); invRot[iS].dim(3,3);
+                rot[iS].set(0,0,n[iS][0]); rot[iS].set(0,1,n[iS][1]); rot[iS].set(0,2,n[iS][2]);
+                rot[iS].set(1,0,ey[0]); rot[iS].set(1,1,ey[1]); rot[iS].set(1,2,ey[2]);
+                rot[iS].set(2,0,ez[0]); rot[iS].set(2,1,ez[1]); rot[iS].set(2,2,ez[2]);
+                invRot[iS]=rot[iS].inv();
+                rot[iS]=rot[iS].T();
+                invRot[iS]=invRot[iS].T();
+            }  
+        }    
     }
     if (src>0) {B.dim(Npq,nEq);}
     
@@ -161,23 +189,23 @@ vector3D physicalElement::getX(vector3D rP)
     return (-(rP[0]+rP[1]+rP[2]+1.)*(*(x0+iVer[0]))+(rP[0]+1.)*(*(x0+iVer[1]))+(rP[1]+1.)*(*(x0+iVer[2]))+(rP[2]+1.)*(*(x0+iVer[3])))/2.;
 }
 matrix physicalElement::HLL(int iS, matrix qInt, matrix qExt)
-// HLL approximated Riemann solver for intercell/boundary convective fluxes // (Toro 1997, p.297)
+// HLL approximated Riemann solver for intercell/boundary convective fluxes (Toro 1997, p.297)
 {
     matrix flxHLL(1,5);
     double pInt=pressure(&qInt,gam,Ma), pExt=pressure(&qExt,gam,Ma);
     double cInt=soundSpeed(&qInt,gam,Ma), cExt=soundSpeed(&qExt,gam,Ma);
     qExt.set(0,1,qExt.part(0,1,1,3)*rot[iS]); qInt.set(0,1,qInt.part(0,1,1,3)*rot[iS]); // local ref. rotation (Mengaldo et al. 2014, p.28)
     double rhoI=qInt.get(0), rhoUI=qInt.get(1), rhoE=qExt.get(0), rhoUE=qExt.get(1);
-    double uI=rhoUI/rhoI, vI=qInt.get(2)/rhoI, wI=qInt.get(3)/rhoI, EI=qInt.get(4);
-    double uE=rhoUE/rhoE, vE=qExt.get(2)/rhoE, wE=qExt.get(3)/rhoE, EE=qExt.get(4);
+    double uI=rhoUI/rhoI, rhoVI=qInt.get(2), rhoWI=qInt.get(3), EI=qInt.get(4);
+    double uE=rhoUE/rhoE, rhoVE=qExt.get(2), rhoWE=qExt.get(3), EE=qExt.get(4);
     double SInt=uI-cInt, SExt=uE+cExt; // wave propagation speeds (Toro 1997, p.302)
     if (SInt>0)
     {
         flxHLL.set(0,rhoUI);
         flxHLL.set(1,rhoUI*uI+pInt/gaM2);
-        flxHLL.set(2,rhoUI*vI);
-        flxHLL.set(3,rhoUI*wI);
-        flxHLL.set(4,uE*(EI+pInt));
+        flxHLL.set(2,rhoVI*uI);
+        flxHLL.set(3,rhoWI*uI);
+        flxHLL.set(4,uI*(EI+pInt));
     }
     else
     {
@@ -185,8 +213,8 @@ matrix physicalElement::HLL(int iS, matrix qInt, matrix qExt)
         {
             flxHLL.set(0,rhoUE);
             flxHLL.set(1,rhoUE*uE+pExt/gaM2);
-            flxHLL.set(2,rhoUE*vE);
-            flxHLL.set(3,rhoUE*wE);
+            flxHLL.set(2,rhoVE*uE);
+            flxHLL.set(3,rhoWE*uE);
             flxHLL.set(4,uE*(EE+pExt));
         }
         else
@@ -194,72 +222,69 @@ matrix physicalElement::HLL(int iS, matrix qInt, matrix qExt)
             double dS=SExt-SInt; double C0=SExt/dS, C1=-SInt/dS, C2=SInt*SExt/dS;
             flxHLL.set(0,C0*qInt.get(1)+C1*qExt.get(1)+C2*(rhoE-rhoI));
             flxHLL.set(1,C0*(rhoUI*uI+pInt/gaM2)+C1*(rhoUE*uE+pExt/gaM2)+C2*(rhoUE-rhoUI));
-            flxHLL.set(2,C0*rhoUI*vI+C1*rhoUE*vE+C2*(rhoE*vE-rhoI*vI));
-            flxHLL.set(3,C0*rhoUI*wI+C1*rhoUE*wE+C2*(rhoE*wE-rhoI*wI));
+            flxHLL.set(2,C0*rhoVI*uI+C1*rhoVE*uE+C2*(rhoVE-rhoVI));
+            flxHLL.set(3,C0*rhoWI*uI+C1*rhoWE*uE+C2*(rhoWE-rhoWI));
             flxHLL.set(4,C0*uI*(EI+pInt)+C1*uE*(EE+pExt)+C2*(EE-EI));        
         }
     }            
-    flxHLL.set(0,1,flxHLL.part(0,1,1,3)*invRot[iS]); // convective numerical fluxes times side Jacobian (Mengaldo et al. 2014, p.28)
-    return flxHLL;
+    flxHLL.set(0,1,flxHLL.part(0,1,1,3)*invRot[iS]); // inverse rotation (Mengaldo et al. 2014, p.28)
+    return flxHLL; // returns convective numerical fluxes times side Jacobian
 }
 matrix physicalElement::HLLC(int iS, matrix qInt, matrix qExt)
-// HLL approximated Riemann solver for intercell/boundary convective fluxes
-// (Toro 1997, p.301; Mengaldo et al. 2014, p.28 and 32-33)
+// HLLC approximated Riemann solver for intercell/boundary convective fluxes (Toro 1997, p.301)
 {
-    matrix flxHLL(1,5);
+    matrix flxHLLC(1,5);
     double pInt=pressure(&qInt,gam,Ma), pExt=pressure(&qExt,gam,Ma);
     double cInt=soundSpeed(&qInt,gam,Ma), cExt=soundSpeed(&qExt,gam,Ma);
-    qExt.set(0,1,qExt.part(0,1,1,3)*rot[iS]); qInt.set(0,1,qInt.part(0,1,1,3)*rot[iS]);
+    qExt.set(0,1,qExt.part(0,1,1,3)*rot[iS]); qInt.set(0,1,qInt.part(0,1,1,3)*rot[iS]);  // local ref. rotation (Mengaldo et al. 2014, p.28)
     double rhoI=qInt.get(0), rhoUI=qInt.get(1), rhoE=qExt.get(0), rhoUE=qExt.get(1);
-    double uI=rhoUI/rhoI, vI=qInt.get(2)/rhoI, wI=qInt.get(3)/rhoI, EI=qInt.get(4);
-    double uE=rhoUE/rhoE, vE=qExt.get(2)/rhoE, wE=qExt.get(3)/rhoE, EE=qExt.get(4);
+    double uI=rhoUI/rhoI, rhoVI=qInt.get(2), rhoWI=qInt.get(3), EI=qInt.get(4);
+    double uE=rhoUE/rhoE, rhoVE=qExt.get(2), rhoWE=qExt.get(3), EE=qExt.get(4);
     double SInt=uI-cInt, SExt=uE+cExt; // wave propagation speeds (Toro 1997, p.302)
     
     if (SInt>0)
     {
-        flxHLL.set(0,rhoUI);
-        flxHLL.set(1,rhoUI*uI+pInt/gaM2);
-        flxHLL.set(2,rhoUI*vI);
-        flxHLL.set(3,rhoUI*wI);
-        flxHLL.set(4,uE*(EI+pInt));
+        flxHLLC.set(0,rhoUI);
+        flxHLLC.set(1,rhoUI*uI+pInt/gaM2);
+        flxHLLC.set(2,rhoVI*uI);
+        flxHLLC.set(3,rhoWI*uI);
+        flxHLLC.set(4,uI*(EI+pInt));
     }
     else
     {
         if (SExt<0)
         {
-            flxHLL.set(0,rhoUE);
-            flxHLL.set(1,rhoUE*uE+pExt/gaM2);
-            flxHLL.set(2,rhoUE*vE);
-            flxHLL.set(3,rhoUE*wE);
-            flxHLL.set(4,uE*(EE+pExt));
+            flxHLLC.set(0,rhoUE);
+            flxHLLC.set(1,rhoUE*uE+pExt/gaM2);
+            flxHLLC.set(2,rhoVE*uE);
+            flxHLLC.set(3,rhoWE*uE);
+            flxHLLC.set(4,uE*(EE+pExt));
         }
         else
         {
             double SM=((pExt-pInt)/gaM2+rhoUI*(SInt-uI)-rhoUE*(SExt-uE))/(rhoI*(SInt-uI)-rhoE*(SExt-uE)); // middle wave speed (Toro 1997, p.305)
             if (SM>=0.)
             {
-                double dS=SInt-SM; double C0=(SInt-uI)/dS;
-                flxHLL.set(0,rhoUI+SInt*(C0*rhoI-rhoI));
-                flxHLL.set(1,rhoUI*uI+pInt/gaM2+SInt*(C0*rhoI*SM-rhoUI));
-//                flxHLL.set(1,rhoUI*uI+pInt/gaM2+SInt*(C0*rhoI*uI-rhoUI));
-                flxHLL.set(2,rhoUI*vI+SInt*(C0*rhoI*vI-rhoI*vI));
-                flxHLL.set(3,rhoUI*wI+SInt*(C0*rhoI*wI-rhoI*wI));
-                flxHLL.set(4,uI*(EI+pInt)+SInt*(C0*rhoI*(EI/rhoI+(SM-uI)*(SM*gaM2+pInt/(rhoI*(SInt-uI))))-EI));
+                double C0=(SInt-uI)/(SInt-SM);
+                flxHLLC.set(0,rhoUI+SInt*(C0*rhoI-rhoI));
+                flxHLLC.set(1,rhoUI*uI+pInt/gaM2+SInt*(C0*rhoI*SM-rhoUI));
+                flxHLLC.set(2,rhoVI*uI+SInt*(C0*rhoVI-rhoVI));
+                flxHLLC.set(3,rhoWI*uI+SInt*(C0*rhoWI-rhoWI));
+                flxHLLC.set(4,uI*(EI+pInt)+SInt*(C0*rhoI*(EI/rhoI+(SM-uI)*(SM*gaM2+pInt/(rhoI*(SInt-uI))))-EI));
             }
             else
             {
-                double dS=SExt-SM; double C0=(SExt-uE)/dS;
-                flxHLL.set(0,rhoUE+SExt*(C0*rhoE-rhoE));
-                flxHLL.set(1,rhoUE*uE+pExt/gaM2+SExt*(C0*rhoE*SM-rhoUE));
-//                flxHLL.set(1,rhoUE*uE+pExt/gaM2+SExt*(C0*rhoE*uE-rhoUE));
-                flxHLL.set(2,rhoUE*vE+SExt*(C0*rhoE*vE-rhoE*vE));
-                flxHLL.set(3,rhoUE*wE+SExt*(C0*rhoE*wE-rhoE*wE));
-                flxHLL.set(4,uE*(EE+pExt)+SExt*(C0*rhoE*(EE/rhoE+(SM-uE)*(SM*gaM2+pExt/(rhoE*(SExt-uE))))-EE));
+                double C0=(SExt-uE)/(SExt-SM);
+                flxHLLC.set(0,rhoUE+SExt*(C0*rhoE-rhoE));
+                flxHLLC.set(1,rhoUE*uE+pExt/gaM2+SExt*(C0*rhoE*SM-rhoUE));
+                flxHLLC.set(2,rhoVE*uE+SExt*(C0*rhoVE-rhoVE));
+                flxHLLC.set(3,rhoWE*uE+SExt*(C0*rhoWE-rhoWE));
+                flxHLLC.set(4,uE*(EE+pExt)+SExt*(C0*rhoE*(EE/rhoE+(SM-uE)*(SM*gaM2+pExt/(rhoE*(SExt-uE))))-EE));
             }       
         }
     }            
-    flxHLL.set(0,1,flxHLL.part(0,1,1,3)*invRot[iS]);
-    return flxHLL; // convective numerical fluxes times side Jacobian
+    flxHLLC.set(0,1,flxHLLC.part(0,1,1,3)*invRot[iS]);  // inverse rotation (Mengaldo et al. 2014, p.28)
+    return flxHLLC; // returns convective numerical fluxes times side Jacobian
 }
 double physicalElement::integral(matrix m)
 {
@@ -340,13 +365,13 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[], 
             int kind=BC[join.get(iS,3)].getKind();
             switch (kind)
             {
-                case 21: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014)
+                case 21: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014, p.18 and 19)
                     for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
                     {
                         for (int eq=0; eq<nAux; eq++) {qAuxS.set(i,eq,BC[join.get(iS,3)].getQ(eq+nEq+1));}
                     }
                 break;
-                case 22: // weak-Riemann no-slip adiabatic condition (Mengaldo et al. 2014)
+                case 22: // weak-Riemann no-slip adiabatic condition (Mengaldo et al. 2014, p.20)
                          // for this case the temperature is not set to a specific value (so it is kept as the internal value)
                     for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
                     {
@@ -778,7 +803,7 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
             }
         }
         break;
-        case 11: // Weak-Riemann farfield condition (Mengaldo et al. 2014) 
+        case 11: // Weak-Riemann farfield condition, neglecting viscous effects (Mengaldo et al. 2014, p.7) 
         {
         // The assigned values are: rho=qB[0], p=qB[5], u=qB[6], v=qB[7], w=qB[8]
             double mu, k, u, v, w, T, ggm1=gam/(gam-1.);
@@ -794,11 +819,11 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 qExt.set(0,3,(*BC).getQ(8)*qExt.get(0)); // z momentum external value (equal to farfield value)
                 qExt.set(0,4,energy(qExt.get(0),qExt.get(1),qExt.get(2),qExt.get(3),(*BC).getQ(5),gam,Ma)); // external energy  (equal to farfield value)
                 //
-                flxS.set(i,0,HLL(iS,qInt,qExt));
+                flxS.set(i,0,HLLC(iS,qInt,qExt));
             }
         }
         break;
-        case 21: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014)
+        case 21: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014, p.18 and 19)
         {
         // The assigned values are: u=qB[6], v=qB[7], w=qB[8], T=qB[9] (T is not use here but in the gradient equation)
             double mu, k, u, v, w, T, ggm1=gam/(gam-1.);
@@ -829,7 +854,7 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
             }
         }
         break;
-        case 22: // weak-Riemann no-slip adiabatic condition (Mengaldo et al. 2014)
+        case 22: // weak-Riemann no-slip adiabatic condition (Mengaldo et al. 2014, p.20)
         {
         // The assigned values are: u=qB[6], v=qB[7], w=qB[8]
             double mu, k, u, v, w, T, ggm1=gam/(gam-1.);
