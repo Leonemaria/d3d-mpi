@@ -25,7 +25,7 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q, double gam, dou
         r=std::sqrt(sq(x[0])+sq(x[1]));
         sinTh=x[1]/r; cosTh=x[0]/r;
         u_r=(1.-1./sq(r))*cosTh;
-        u_t=-(1.+1./sq(r))*sinTh+0.2/sq(r);
+        u_t=-(1.+1./sq(r))*sinTh+0.1/sq(r);
         u=u_r*cosTh-u_t*sinTh;
         v=u_r*sinTh+u_t*cosTh;
         p=1.;

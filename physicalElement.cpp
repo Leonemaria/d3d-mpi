@@ -55,54 +55,14 @@ void physicalElement::init(int my, computationalElement *c, vector3D x[], int iV
     //
     if (CIF>0)
     {
-        vector3D ey, ez, eY(0.,1.,0.), eZ(0.,0.,1.);
-        for (int i=0; i<4; i++)
-        {
-            if (std::abs(n[i][1])>std::abs(n[i][2]))
-            {
-                ey=(eZ.cross(n[i])).normalized();
-                ez=(n[i].cross(ey)).normalized();
-            }
-            else
-            {
-                ez=(n[i].cross(eY)).normalized();
-                ey=(ez.cross(n[i])).normalized();
-            }
-            rot[i].dim(3,3); invRot[i].dim(3,3);
-            rot[i].set(0,0,n[i][0]); rot[i].set(0,1,n[i][1]); rot[i].set(0,2,n[i][2]);
-            rot[i].set(1,0,ey[0]); rot[i].set(1,1,ey[1]); rot[i].set(1,2,ey[2]);
-            rot[i].set(2,0,ez[0]); rot[i].set(2,1,ez[1]); rot[i].set(2,2,ez[2]);
-            invRot[i]=rot[i].inv();
-            rot[i]=rot[i].T();
-            invRot[i]=invRot[i].T();   
-        }
+        for (int iS=0; iS<4; iS++) {mkRot(iS);}
     }
     for (int iS=0; iS<4; iS++)
     {
         if ((l.get(iS,0)==myRank)&&(l.get(iS,1)==mySelf)&(l.get(iS,2)==iS))
         {
             setBC(iS);
-            if ((BC[join.get(iS,3)].getKind()==11)&&(rot[iS].size()==0))
-            {
-                vector3D ey, ez, eY(0.,1.,0.), eZ(0.,0.,1.);
-                if (std::abs(n[iS][1])>std::abs(n[iS][2]))
-                {
-                    ey=(eZ.cross(n[iS])).normalized();
-                    ez=(n[iS].cross(ey)).normalized();
-                }
-                else
-                {
-                    ez=(n[iS].cross(eY)).normalized();
-                    ey=(ez.cross(n[iS])).normalized();
-                }
-                rot[iS].dim(3,3); invRot[iS].dim(3,3);
-                rot[iS].set(0,0,n[iS][0]); rot[iS].set(0,1,n[iS][1]); rot[iS].set(0,2,n[iS][2]);
-                rot[iS].set(1,0,ey[0]); rot[iS].set(1,1,ey[1]); rot[iS].set(1,2,ey[2]);
-                rot[iS].set(2,0,ez[0]); rot[iS].set(2,1,ez[1]); rot[iS].set(2,2,ez[2]);
-                invRot[iS]=rot[iS].inv();
-                rot[iS]=rot[iS].T();
-                invRot[iS]=invRot[iS].T();
-            }  
+            if ((BC[join.get(iS,3)].getKind()==11)&&(rot[iS].size()==0)) {mkRot(iS);}  
         }    
     }
     if (src>0) {B.dim(Npq,nEq);}
@@ -312,6 +272,27 @@ matrix physicalElement::LaxFriedrichs(int iS, matrix qInt, matrix qExt, matrix f
     double cInt=soundSpeed(&qInt,gam,Ma), cExt=soundSpeed(&qExt,gam,Ma);
     double C=std::max(abs(UnInt)+cInt, abs(UnExt)+cExt);
     return (fInt+fExt+C*(qInt-qExt))/2.;
+}
+void physicalElement::mkRot(int iS)
+{
+    vector3D ey, ez, eY(0.,1.,0.), eZ(0.,0.,1.);
+    if (std::abs(n[iS][1])>std::abs(n[iS][2]))
+    {
+        ey=(eZ.cross(n[iS])).normalized();
+        ez=(n[iS].cross(ey)).normalized();
+    }
+    else
+    {
+        ez=(n[iS].cross(eY)).normalized();
+        ey=(ez.cross(n[iS])).normalized();
+    }
+    rot[iS].dim(3,3); invRot[iS].dim(3,3);
+    rot[iS].set(0,0,n[iS][0]); rot[iS].set(0,1,n[iS][1]); rot[iS].set(0,2,n[iS][2]);
+    rot[iS].set(1,0,ey[0]); rot[iS].set(1,1,ey[1]); rot[iS].set(1,2,ey[2]);
+    rot[iS].set(2,0,ez[0]); rot[iS].set(2,1,ez[1]); rot[iS].set(2,2,ez[2]);
+    invRot[iS]=rot[iS].inv();
+    rot[iS]=rot[iS].T();
+    invRot[iS]=invRot[iS].T();
 }
 int physicalElement::nQuadPoints()
 {

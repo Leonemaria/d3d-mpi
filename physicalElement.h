@@ -49,6 +49,7 @@ class physicalElement
         matrix integralM(matrix m);
         double Jacobian();
         matrix LaxFriedrichs(int iS, matrix qInt, matrix qExt, matrix fInt, matrix fExt);
+        void mkRot(int iS);
         int nQuadPoints();
         int ord();
         void print();
