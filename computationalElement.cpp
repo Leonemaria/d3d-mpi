@@ -8,6 +8,7 @@ computationalElement::computationalElement()
 computationalElement::computationalElement(const global& glb)
 {
 //
+    // the computational tetrahedral element (according to Hesthaven&Waburton 2008, p.409)
     src=glb.sch[3];
     N=glb.sch[0]; Nm=nModes(N); // polynomial order and number of nodal points
     int NF=N/2; NF=N;
@@ -179,7 +180,7 @@ void computationalElement::step_I(matrix* A_x, matrix* A_y, matrix* A_z, matrix 
 }
 void computationalElement::step_IIa(double d, int m, matrix* KA, matrix* A, matrix* A_0, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z)
 {
-// five step fourth order Runge Kutta scheme SSPRK(5,4) (Gottlieb&Ketcheson&Shu pag.23)
+// five step fourth order Runge Kutta scheme SSPRK(5,4) (Gottlieb&Ketcheson&Shu p.23)
     switch (m)
     {
         case 0:

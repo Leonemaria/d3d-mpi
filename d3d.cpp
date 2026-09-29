@@ -82,7 +82,7 @@ int main(int argc, char* argv[])
     for (int i=1; i<nBC; i++)
     {
         MPI_Bcast(BC[i].intData(),1,MPI_INT,0,MPI_COMM_WORLD);  
-        MPI_Bcast(BC[i].doubleData(),10,MPI_INT,0,MPI_COMM_WORLD);        
+        MPI_Bcast(BC[i].doubleData(),10,MPI_DOUBLE,0,MPI_COMM_WORLD);        
     }
 //***************************************
 //  input of geometry (points, elements, links and boundary conditions)
@@ -281,9 +281,8 @@ int main(int argc, char* argv[])
             {
                H+=e[iC].getHist();
             }
-            double h[H.nC()], glH[H.nC()]={0.};
-            for (int j=0; j<H.nC(); j++) {h[j]=H.get(j);}
-            MPI_Reduce(h,glH,H.nC(),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+            double glH[H.nC()]={0.};
+            MPI_Reduce(H.data(),glH,H.nC(),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
             if(myRank==0)
             {
                 outputFileHist << i*glb.dt;

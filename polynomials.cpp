@@ -140,7 +140,7 @@ vector2D l_to_xy(double l1,double l2, double l3, vector2D v[])
 {
     return l3*v[0]+l2*v[1]+l1*v[2];
 }
-double psi3D(int i, int j, int k, vector3D rP)
+double psi3D(int i, int j, int k, vector3D rP) // (Hesthaven&Waburton 2008, p.411 and Appendix A)
 {
     double a, b, c=rP[2];
     if (std::abs(rP[1]+rP[2])> 0.0000000001) {a=-2.*(1.+rP[0])/(rP[1]+rP[2])-1.;}

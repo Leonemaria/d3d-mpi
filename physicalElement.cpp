@@ -27,7 +27,7 @@ void physicalElement::init(int my, computationalElement *c, vector3D x[], int iV
     x_r=edge01/2.;
     x_s=edge02/2.;
     x_t=edge03/2.;
-    J=x_r[0]*(x_s[1]*x_t[2]-x_s[2]*x_t[1])-x_r[1]*(x_s[0]*x_t[2]-x_s[2]*x_t[0])+x_r[2]*(x_s[0]*x_t[1]-x_s[1]*x_t[0]);
+    J=x_r[0]*(x_s[1]*x_t[2]-x_s[2]*x_t[1])-x_r[1]*(x_s[0]*x_t[2]-x_s[2]*x_t[0])+x_r[2]*(x_s[0]*x_t[1]-x_s[1]*x_t[0]); // (Hesthaven&Waburton 2008, p.410)
     JS[0]=(edge01.cross(edge02)).norm()/(2.*J);
     n[0]=-(edge01.cross(edge02)).normalized();
     JS[1]=(edge01.cross(edge03)).norm()/(2.*J);
@@ -39,7 +39,7 @@ void physicalElement::init(int my, computationalElement *c, vector3D x[], int iV
     h=std::pow(J*4./3.,1./3.); // lenght for CFL computation (Bakosi 2024, p.3 eq.17)
     d=std::pow(J*4./3./Nm,1./3.); // grid LES scale (Abba' et al. 2015)
     dF=std::pow(J*4./3./NmF,1./3.); // grid LES larger scale
-    r_x[0]=(x_s[1]*x_t[2]-x_s[2]*x_t[1])/J;
+    r_x[0]=(x_s[1]*x_t[2]-x_s[2]*x_t[1])/J; // (Hesthaven&Waburton 2008, p.410)
     r_y[0]=-(x_s[0]*x_t[2]-x_s[2]*x_t[0])/J;
     r_z[0]=(x_s[0]*x_t[1]-x_s[1]*x_t[0])/J;
     r_x[1]=-(x_r[1]*x_t[2]-x_r[2]*x_t[1])/J;
@@ -338,7 +338,6 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[], 
         qAuxS.set(i,0,qS.get(i,1)/rho); qAuxS.set(i,1,qS.get(i,2)/rho); qAuxS.set(i,2,qS.get(i,3)/rho); // set the side values (in i-th quadrature point) of the three first auxiliary variables (u, v and w) in qAuxS matrix
         qAuxS.set(i,3,pressure(qS.row(i),gam,Ma)/rho); // set the side values (in i-th quadrature point) of the fourth auxiliary variables (T) in qAuxS matrix
     }
-//    if (myRank==1&mySelf==4) {qAuxS.row(Npq2).print();}
     for (int iS=0; iS<4; iS++)
     {
         if (BS[iS])
@@ -819,11 +818,28 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 qExt.set(0,2,2.*(*BC).getQ(7)*qExt.get(0)-qInt.get(2)); // y momentum external value (extrapolating from inetrnal and boundary values)
                 qExt.set(0,3,2.*(*BC).getQ(8)*qExt.get(0)-qInt.get(3)); // z momentum external value (extrapolating from inetrnal and boundary values)
                 qExt.set(0,4,qInt.get(4)); // external energy equal to internl value
-                convFlux(bF,qInt.get(0),qInt.get(1),qInt.get(2),qInt.get(3),qInt.get(4));
-                flxInt=bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2];
-                convFlux(bF,qExt.get(0),qExt.get(1),qExt.get(2),qExt.get(3),qExt.get(4));
-                flxExt=bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2];
-                flxS.set(i,0,LaxFriedrichs(iS,qInt,qExt,flxInt,flxExt));
+                switch (CIF)
+                {
+                    case 0: // Lax-Friedrichs
+                    {
+                        convFlux(bF,qInt.get(0),qInt.get(1),qInt.get(2),qInt.get(3),qInt.get(4));
+                        flxInt=bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2];
+                        convFlux(bF,qExt.get(0),qExt.get(1),qExt.get(2),qExt.get(3),qExt.get(4));
+                        flxExt=bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2];
+                        flxS.set(i,0,LaxFriedrichs(iS,qInt,qExt,flxInt,flxExt));                       
+                    }
+                    break;
+                    case 1: // HLL
+                    {
+                        flxS.set(i,0,HLL(iS,qInt,qExt));                       
+                    }
+                    break;
+                    case 2: // HLLC
+                    {
+                        flxS.set(i,0,HLLC(iS,qInt,qExt));                       
+                    }
+                    break;
+                }
                 u=qAuxS.get(i,0); v=qAuxS.get(i,1); w=qAuxS.get(i,2); T=qAuxS.get(i,3);
                 Sr=strainRate((*dx).row(i),(*dy).row(i),(*dz).row(i));
                 mu=Sutherland(T,S,Re); k=mu/Pr;
