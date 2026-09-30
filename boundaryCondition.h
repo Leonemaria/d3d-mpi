@@ -24,7 +24,7 @@ class boundaryCondition
         int* intData();
     private:
 // private variable declarations
-        int kind; // number of equation, kind of condition
+        int kind[2]; // kind of condition and possible index of the force and moment
         double qB[10]; // boundary values (depend on the kind of BC)
 };
 //

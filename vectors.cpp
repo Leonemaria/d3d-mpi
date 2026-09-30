@@ -108,8 +108,10 @@ vector3D vector3D::cross(const vector3D& v)
     vc[2]=a[0]*v[1]-a[1]*v[0];
     return vc;
 }
-
-
+double* vector3D::data()
+{
+    return &a[0];
+}
 double vector3D::norm() const
 {
     double n;
@@ -254,6 +256,14 @@ vector3D operator-(const vector3D& v1, const vector3D& v2)
     vec[0]=v1[0]-v2[0];
     vec[1]=v1[1]-v2[1];
     vec[2]=v1[2]-v2[2];
+    return vec;
+}
+vector3D operator*(const symTensor& t, const vector3D& v)
+{
+    vector3D vec;
+    vec[0]=t.get(0,0)*v[0]+t.get(0,1)*v[1]+t.get(0,2)*v[2];
+    vec[1]=t.get(1,0)*v[0]+t.get(1,1)*v[1]+t.get(1,2)*v[2];
+    vec[2]=t.get(2,0)*v[0]+t.get(2,1)*v[1]+t.get(2,2)*v[2];
     return vec;
 }
 

@@ -31,6 +31,7 @@ class symTensor
         void set(int i, int j, double aij);
         void set(double a00, double a10, double a11, double a20, double a21, double a22);
         double trace() const;
+        void trace(double t);
         void zero();
         void operator+=(const symTensor& t);
         void operator-=(const symTensor& t);
@@ -42,7 +43,6 @@ class symTensor
         symTensor operator/(const int c) const;
         symTensor operator-() const;
         symTensor operator*(const symTensor& t) const;
-        tensor operator*(const tensor& t) const;
         friend symTensor operator*(double c, const symTensor& t);
         friend symTensor operator*(int c, const symTensor& t);
     private:

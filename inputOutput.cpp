@@ -47,7 +47,7 @@ void readRun(std::ifstream &fin, global& glb)
     fin >> glb.ctr[4]; skipLine(fin, 1); // integrated quantities damping period
     fin >> glb.dt; skipLine(fin, 1);       // time step
     fin >> glb.sch[3];                        // source terms flag
-
+    fin >> glb.ctr[5]; skipLine(fin, 1); // number of computed forces/moments
 }
 double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D xN[], int nCells, physicalElement e[], const global& glb, computationalElement *cc, boundaryCondition BC[], int rank)
 {

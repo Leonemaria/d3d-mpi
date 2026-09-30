@@ -63,8 +63,9 @@ int main(int argc, char* argv[])
         std::cout << "LES model=" << glb.sch[1] << std::endl;
     }
     MPI_Bcast(&glb.dt,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Bcast(glb.ctr,5,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Bcast(glb.ctr,6,MPI_INT,0,MPI_COMM_WORLD);
     MPI_Bcast(glb.sch,4,MPI_INT,0,MPI_COMM_WORLD);
+    vector3D forces[glb.ctr[5]];
     computationalElement cc(glb);
 //  input of boundary conditions
     int nBC; std::ifstream inputFileBC;
@@ -81,7 +82,7 @@ int main(int argc, char* argv[])
     }
     for (int i=1; i<nBC; i++)
     {
-        MPI_Bcast(BC[i].intData(),1,MPI_INT,0,MPI_COMM_WORLD);  
+        MPI_Bcast(BC[i].intData(),2,MPI_INT,0,MPI_COMM_WORLD);  
         MPI_Bcast(BC[i].doubleData(),10,MPI_DOUBLE,0,MPI_COMM_WORLD);        
     }
 //***************************************
@@ -232,7 +233,7 @@ int main(int argc, char* argv[])
 #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
             {
-                e[iC].step_I(glb.dt,ii,caseName,e,BC,&dmpH,myRank,qARcv,fSnd); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
+                e[iC].step_I(glb.dt,ii,caseName,e,BC,&dmpH,myRank,qARcv,fSnd,forces,dmpR); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
                 // then updates the conservative variable modal amplitude making a time substep (with volume integrals only)
             }
 // computes numerical fluxes and advances the solution

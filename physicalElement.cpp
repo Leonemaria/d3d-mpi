@@ -376,7 +376,7 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[], 
    }
 }
 void physicalElement::step_I(double dt, int m, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH, int myRank,
-     matrix qARcv[], matrix fSnd[])
+     matrix qARcv[], matrix fSnd[], vector3D forces[], bool dmpR)
 // computes the auxiliary variable gradients and physical fluxes on internal and side quadrature points
 // the internal fluxes (convective-viscous) are stored in the matrix array fluxq[3]: the i-th matrix contains the i-th component of fluxes
 // the side fluxes are stored
@@ -458,7 +458,7 @@ void physicalElement::step_I(double dt, int m, std::string nameCase, physicalEle
     {
         if (BS[iS])
         {
-            boundaryFluxes(&q_xS,&q_yS,&q_zS,iS,&BC[join.get(iS,3)]);
+            boundaryFluxes(&q_xS,&q_yS,&q_zS,iS,&BC[join.get(iS,3)],forces,dmpR);
         }
         else
         {
@@ -754,7 +754,7 @@ void physicalElement::viscFluxes(matrix* dx, matrix* dy, matrix* dz, matrix* qF,
         break;
     }
 }
-void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS, boundaryCondition* BC)
+void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS, boundaryCondition* BC, vector3D forces[], bool dmpR)
 // computation of a face normal viscous flux
 {
     int kind=(*BC).getKind(); // the boundary type

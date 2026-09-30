@@ -4,7 +4,8 @@
 #include <iostream>
 #include <cstdlib>
 #include <fstream>
-#include<cmath>
+#include <cmath>
+#include "tensor.h"
 
 class vector2D
 {
@@ -40,6 +41,7 @@ class vector3D
         vector3D& operator=(const vector3D& other);
 // methods
         vector3D cross(const vector3D& v);
+        double* data();
         double norm() const;
         void normalize();
         vector3D normalized() const;
@@ -69,5 +71,6 @@ vector3D operator*(const vector3D& v, const double c);
 vector3D operator/(const vector3D& v, const double c);
 vector3D operator+(const vector3D& v1, const vector3D& v2);
 vector3D operator-(const vector3D& v1, const vector3D& v2);
+vector3D operator*(const symTensor& t, const vector3D& v);
 //
 #endif

@@ -101,6 +101,13 @@ double symTensor::trace() const
     double t=a[0]+a[2]+a[5];
     return t;
 }
+void symTensor::trace(double t)
+{
+    noTrace(); double t3=t/3;
+    a[0]+=t3;
+    a[1]+=t3;
+    a[2]+=t3;
+}
 void symTensor::zero()
 {
     a[0]=0.; a[1]=0.; a[2]=0.; a[3]=0.; a[4]=0.; a[5]=0.;

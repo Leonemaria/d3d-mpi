@@ -13,12 +13,13 @@ struct global
         // phy[3]: reference Prandtl number Pr            
         // phy[4]: air specific heats ratio gamma            
         // phy[5]: Suherland temperature ratio         
-    int ctr[5]; // array of run controls
+    int ctr[6]; // array of run controls
      // ctr[0]: initial number of time steps
      // ctr[1]: final number of time steps
      // ctr[2]: solution damping period
      // ctr[3]: residual damping period
-     // ctr[4]: integrated quantities damping period
+     // ctr[4]: traced quantities damping period
+     // ctr[5]: number of computed forces/moments
     int sch[4]; // array of numerical scheme definers
      // sch[0]: polynomials max order
      // sch[1]: kind of LES model
