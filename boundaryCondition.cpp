@@ -12,9 +12,9 @@ boundaryCondition::boundaryCondition()
     }
 }
 // methods
-int boundaryCondition::getKind()
+int boundaryCondition::getKind(int i)
 {
-    return kind[0];
+    return kind[i];
 }
 double boundaryCondition::getQ(int eq)
 {

@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
     MPI_Bcast(&glb.dt,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(glb.ctr,6,MPI_INT,0,MPI_COMM_WORLD);
     MPI_Bcast(glb.sch,4,MPI_INT,0,MPI_COMM_WORLD);
-    vector3D forces[glb.ctr[5]];
+    matrix forces(glb.ctr[5],3);
     computationalElement cc(glb);
 //  input of boundary conditions
     int nBC; std::ifstream inputFileBC;
@@ -192,16 +192,18 @@ int main(int argc, char* argv[])
     initialConditions(caseName,nCells,e,glb,myRank);
     matrix H;
 // start time marching simulation       
-    std::ofstream outputFileRes,outputFileHist;
+    std::ofstream outputFileRes, outputFileHist, outputFileForce;
     if (glb.ctr[0]==0)
     {
         outputFileRes.open("./"+caseName+"/output/residual.dat",std::ios::out);
         outputFileHist.open("./"+caseName+"/output/history.dat",std::ios::out);
+        outputFileForce.open("./"+caseName+"/output/forces.dat",std::ios::out);
     }
     else
     {
         outputFileRes.open("./"+caseName+"/output/residual.dat",std::ios::app);
         outputFileHist.open("./"+caseName+"/output/history.dat",std::ios::app);
+        outputFileForce.open("./"+caseName+"/output/forces.dat",std::ios::app);
     }
     outputFileHist << std::setprecision(12);
     double t_start; if (myRank==0) {t_start=omp_get_wtime();}
@@ -233,7 +235,7 @@ int main(int argc, char* argv[])
 #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
             {
-                e[iC].step_I(glb.dt,ii,caseName,e,BC,&dmpH,myRank,qARcv,fSnd,forces,dmpR); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
+                e[iC].step_I(glb.dt,ii,caseName,e,BC,&dmpH,myRank,qARcv,fSnd,&forces,dmpR); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
                 // then updates the conservative variable modal amplitude making a time substep (with volume integrals only)
             }
 // computes numerical fluxes and advances the solution
@@ -282,16 +284,22 @@ int main(int argc, char* argv[])
             {
                H+=e[iC].getHist();
             }
-            double glH[H.nC()]={0.};
+            double glH[H.nC()]={0.}; matrix glFo(glb.ctr[5],3);
             MPI_Reduce(H.data(),glH,H.nC(),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+            MPI_Reduce(forces.data(),glFo.data(),3*glb.ctr[5],MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
             if(myRank==0)
             {
                 outputFileHist << i*glb.dt;
                 for (int j=0; j<H.nC(); j++)
                 {
                     outputFileHist << " " << glH[j]/totVolume;
-                }
-                outputFileHist << std::endl;
+                }                
+                outputFileForce << std::endl;
+                for (int j=0; j<glb.ctr[5]; j++)
+                {
+                    outputFileForce << " " << forces.get(j,0) << " " << forces.get(j,1) << " " << forces.get(j,2);
+                }                
+                outputFileForce << std::endl;
             }
         }
     }

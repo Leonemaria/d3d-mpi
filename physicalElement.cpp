@@ -62,7 +62,7 @@ void physicalElement::init(int my, computationalElement *c, vector3D x[], int iV
         if ((l.get(iS,0)==myRank)&&(l.get(iS,1)==mySelf)&(l.get(iS,2)==iS))
         {
             setBC(iS);
-            if ((BC[join.get(iS,3)].getKind()==11)&&(rot[iS].size()==0)) {mkRot(iS);}  
+            if ((BC[join.get(iS,3)].getKind(0)==11)&&(rot[iS].size()==0)) {mkRot(iS);}  
         }    
     }
     if (src>0) {B.dim(Npq,nEq);}
@@ -246,16 +246,31 @@ matrix physicalElement::HLLC(int iS, matrix qInt, matrix qExt)
     flxHLLC.set(0,1,flxHLLC.part(0,1,1,3)*invRot[iS]);  // inverse rotation (Mengaldo et al. 2014, p.28)
     return flxHLLC; // returns convective numerical fluxes times side Jacobian
 }
-double physicalElement::integral(matrix m)
+double physicalElement::integralV(matrix m) // volume integral over the element
 {
-    return J*(m.T()*(*cE).wQuad()).get(0);
+// the matrix m is a column matrix (each element is the value of the integrand in the corresponding quadrature point)
+    return J*(m.T()*(*cE).wQuad(3)).get(0);
 }
-matrix physicalElement::integralM(matrix m)
+matrix physicalElement::integralVM(matrix m) // more integrands
+{
+    matrix mm(1,m.nC()); // row matrix containing the integrals
+    for (int i=0; i<m.nC(); i++)
+    {
+        mm.set(i,integralV(m.col(i)));
+    }
+    return mm;
+}
+double physicalElement::integralS(int iS, matrix m) // surface integral over the iS-th face
+{
+// the matrix m is a column matrix (each element is the value of the integrand in the corresponding quadrature point)
+    return J*JS[iS]*(m.T()*(*cE).wQuad(2)).get(0);
+}
+matrix physicalElement::integralSM(int iS, matrix m)
 {
     matrix mm(1,m.nC());
     for (int i=0; i<m.nC(); i++)
     {
-        mm.set(i,integral(m.col(i)));
+        mm.set(i,integralS(iS,m.col(i)));
     }
     return mm;
 }
@@ -342,7 +357,7 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[], 
     {
         if (BS[iS])
         {
-            int kind=BC[join.get(iS,3)].getKind();
+            int kind=BC[join.get(iS,3)].getKind(0);
             switch (kind)
             {
                 case 21: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014, p.18 and 19)
@@ -376,7 +391,7 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[], 
    }
 }
 void physicalElement::step_I(double dt, int m, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH, int myRank,
-     matrix qARcv[], matrix fSnd[], vector3D forces[], bool dmpR)
+     matrix qARcv[], matrix fSnd[], matrix* forces, bool dmpR)
 // computes the auxiliary variable gradients and physical fluxes on internal and side quadrature points
 // the internal fluxes (convective-viscous) are stored in the matrix array fluxq[3]: the i-th matrix contains the i-th component of fluxes
 // the side fluxes are stored
@@ -449,7 +464,7 @@ void physicalElement::step_I(double dt, int m, std::string nameCase, physicalEle
     if(*dmpH) // compute the possible other(statistic) variables
     {
         matrix var=varHist(nameCase,cE,d,dF,&qq,&qqAux,&qq_x,&qq_y,&qq_z,&qF,gam,Ma,LES);
-        H=integralM(var);
+        H=integralVM(var);
     }     
     // compute the viscous part (including sgs) of physical fluxes on quadrature points
     viscFluxes(flxq,&qq,&qqAux,&qq_x,&qq_y,&qq_z,&qF); // viscous/sgs flux on internal quadrature points
@@ -563,7 +578,7 @@ void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, 
         }
     }
     (*cE).step_IIb(dt,m,&KA,&A,&A_0,&numFlx); //computation of mode amplitude of condervative variables (addition of surface integral)
-    if (dmpR) {res=integral((*cE).getPHI()*(A.col(0)-A_0.col(0)));}
+    if (dmpR) {res=integralV((*cE).getPHI()*(A.col(0)-A_0.col(0)));}
 }
 double* physicalElement::toAM()
 {
@@ -754,10 +769,12 @@ void physicalElement::viscFluxes(matrix* dx, matrix* dy, matrix* dz, matrix* qF,
         break;
     }
 }
-void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS, boundaryCondition* BC, vector3D forces[], bool dmpR)
+void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS, boundaryCondition* BC, matrix* forces, bool dmpR)
 // computation of a face normal viscous flux
 {
-    int kind=(*BC).getKind(); // the boundary type
+    int kind=(*BC).getKind(0); // the boundary type
+    int iFo=(*BC).getKind(1); matrix stress; bool fo=false;
+    if ((iFo>=20)&&dmpR) {fo=true; stress.dim(Npq2,3);}
     switch (kind)
     {
         case 0: // No condition
@@ -848,7 +865,13 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 heat=-k*ggm1*gradT;
                 viscousFlux(bF,u,v,w,tau,heat);
                 flxS.add(i,0,bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2]);
+                if (fo)
+                {
+                    tau.trace(qInt.get(0)*T);
+                    stress.set(i-iS*Npq2,0,(tau*n[iS]).to_row()); // computes the stress over the iS-th face in the i-th point
+                }
             }
+            if (fo) {(*forces).add(iFo,0,integralSM(iS,stress));} // adds the contribution to the force
         }
         break;
         case 22: // weak-Riemann no-slip adiabatic condition (Mengaldo et al. 2014, p.20)
@@ -899,7 +922,13 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 heat=-k*ggm1*gradT;
                 viscousFlux(bF,u,v,w,tau,heat);
                 flxS.add(i,0,bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2]);
+                if (fo)
+                {
+                    tau.trace(qInt.get(0)*T);
+                    stress.set(i-iS*Npq2,0,(tau*n[iS]).to_row()); // computes the stress over the iS-th face in the i-th point
+                }
             }
+            if (fo) {(*forces).add(iFo,0,integralSM(iS,stress));} // adds the contribution to the force
         }
         break;
     }

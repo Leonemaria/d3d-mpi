@@ -36,6 +36,7 @@ class matrix
         matrix minor(int i, int j) const;
         int nR() const;
         int nC() const;
+        matrix part(int i, int l) const; 
         matrix part(int i, int j, int h, int l) const; 
         void pivot(int i);
         matrix pw(int n) const;

@@ -27,7 +27,7 @@ class computationalElement
         matrix getE();
         matrix getF();
         matrix getF2();
-        matrix wQuad();
+        matrix wQuad(int d);
         void step_I(matrix* A_x, matrix* A_y, matrix* A_z, matrix f, matrix fS[], vector3D r_x, vector3D r_y, vector3D r_z);
         void step_IIa(double dt, int m, matrix* KA, matrix* A, matrix* A_0, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z);
         void step_IIb(double dt, int m, matrix* KA, matrix* A, matrix* A_0, matrix* fS);

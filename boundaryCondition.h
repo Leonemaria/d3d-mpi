@@ -17,7 +17,7 @@ class boundaryCondition
 // constructors/destructor declarations
         boundaryCondition();
 // public methods declarations
-        int getKind();
+        int getKind(int i);
         double getQ(int eq);
         void input(std::ifstream &iFile);
         double* doubleData();

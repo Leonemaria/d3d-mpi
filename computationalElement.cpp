@@ -159,9 +159,10 @@ matrix computationalElement::getF2()
 {
     return F2;
 }
-matrix computationalElement::wQuad()
+matrix computationalElement::wQuad(int d)
 {
-    return w3D;
+    if (d==2) {return w2D.part(0,Npq2);}
+    if (d==3) {return w3D;}
 }
 matrix computationalElement::subStep_a(double d, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z)
 {  

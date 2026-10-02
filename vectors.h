@@ -46,6 +46,8 @@ class vector3D
         void normalize();
         vector3D normalized() const;
         void set(double c1, double c2, double c3);
+        matrix to_col();
+        matrix to_row();
         void zero();
         double dot(const vector3D& v) const;
         double operator[](int i) const;

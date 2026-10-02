@@ -220,6 +220,17 @@ int matrix::nR() const
 {
     return nr;
 }
+matrix matrix::part(int i, int l) const
+{
+    matrix m;
+    if (nc==1) {m.dim(l,1);}
+    else {m.dim(1,l);}
+    for (int ii=0; ii<l; ii++)
+    {
+        m.set(ii,get(i+ii));
+    }
+    return m;
+}
 matrix matrix::part(int i, int j, int h, int l) const
 {
     matrix m(h,l);

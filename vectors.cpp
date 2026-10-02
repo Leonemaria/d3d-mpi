@@ -136,6 +136,22 @@ void vector3D::set(double c1, double c2, double c3)
 {
     a[0]=c1; a[1]=c2; a[2]=c3;
 }
+matrix vector3D::to_col()
+{
+    matrix m(3,1);
+    m.set(0,a[0]);
+    m.set(1,a[1]);
+    m.set(2,a[2]);
+    return m;
+}
+matrix vector3D::to_row()
+{
+    matrix m(1,3);
+    m.set(0,a[0]);
+    m.set(1,a[1]);
+    m.set(2,a[2]);
+    return m;
+}
 void vector3D::zero()
 {
     a[0]=0.; a[1]=0.; a[2]=0.;
