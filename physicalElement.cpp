@@ -188,7 +188,7 @@ matrix physicalElement::HLL(int iS, matrix qInt, matrix qExt)
         }
     }            
     flxHLL.set(0,1,flxHLL.part(0,1,1,3)*invRot[iS]); // inverse rotation (Mengaldo et al. 2014, p.28)
-    return flxHLL; // returns convective numerical fluxes times side Jacobian
+    return flxHLL; // returns convective normal fluxes
 }
 matrix physicalElement::HLLC(int iS, matrix qInt, matrix qExt)
 // HLLC approximated Riemann solver for intercell/boundary convective fluxes (Toro 1997, p.301)
@@ -244,7 +244,7 @@ matrix physicalElement::HLLC(int iS, matrix qInt, matrix qExt)
         }
     }            
     flxHLLC.set(0,1,flxHLLC.part(0,1,1,3)*invRot[iS]);  // inverse rotation (Mengaldo et al. 2014, p.28)
-    return flxHLLC; // returns convective numerical fluxes times side Jacobian
+    return flxHLLC; // returns convective normal fluxes
 }
 double physicalElement::integralV(matrix m) // volume integral over the element
 {
@@ -773,8 +773,13 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
 // computation of a face normal viscous flux
 {
     int kind=(*BC).getKind(0); // the boundary type
-    int iFo=(*BC).getKind(1); matrix stress; bool fo=false;
-    if ((iFo>=20)&&dmpR) {fo=true; stress.dim(Npq2,3);}
+    int iFo; matrix stress; bool fo=false;
+//    std::cout << "kind=" << kind << " iFo=" << iFo << " dmpH=" << dmpR << std::endl;
+    if ((kind>=20)&&dmpR)
+    {
+        iFo=(*BC).getKind(1);
+        if (iFo>=0) {fo=true; stress.dim(Npq2,3);}
+    }
     switch (kind)
     {
         case 0: // No condition
@@ -867,7 +872,7 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 flxS.add(i,0,bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2]);
                 if (fo)
                 {
-                    tau.trace(qInt.get(0)*T);
+                    tau.trace(-3.*qInt.get(0)*T/gaM2);
                     stress.set(i-iS*Npq2,0,(tau*n[iS]).to_row()); // computes the stress over the iS-th face in the i-th point
                 }
             }
@@ -924,7 +929,7 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 flxS.add(i,0,bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2]);
                 if (fo)
                 {
-                    tau.trace(qInt.get(0)*T);
+                    tau.trace(-3.*qInt.get(0)*T/gaM2);
                     stress.set(i-iS*Npq2,0,(tau*n[iS]).to_row()); // computes the stress over the iS-th face in the i-th point
                 }
             }

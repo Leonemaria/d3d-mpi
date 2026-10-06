@@ -105,8 +105,8 @@ void symTensor::trace(double t)
 {
     noTrace(); double t3=t/3;
     a[0]+=t3;
-    a[1]+=t3;
     a[2]+=t3;
+    a[5]+=t3;
 }
 void symTensor::zero()
 {

@@ -235,7 +235,7 @@ int main(int argc, char* argv[])
 #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
             {
-                e[iC].step_I(glb.dt,ii,caseName,e,BC,&dmpH,myRank,qARcv,fSnd,&forces,dmpR); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
+                e[iC].step_I(glb.dt,ii,caseName,e,BC,&dmpH,myRank,qARcv,fSnd,&forces,dmpH); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
                 // then updates the conservative variable modal amplitude making a time substep (with volume integrals only)
             }
 // computes numerical fluxes and advances the solution
@@ -294,13 +294,16 @@ int main(int argc, char* argv[])
                 {
                     outputFileHist << " " << glH[j]/totVolume;
                 }                
-                outputFileForce << std::endl;
+                outputFileHist << std::endl;
+                outputFileForce << i*glb.dt;
                 for (int j=0; j<glb.ctr[5]; j++)
                 {
                     outputFileForce << " " << forces.get(j,0) << " " << forces.get(j,1) << " " << forces.get(j,2);
                 }                
                 outputFileForce << std::endl;
+                forces.zero();
             }
+            MPI_Bcast(forces.data(),3*glb.ctr[5],MPI_DOUBLE,0,MPI_COMM_WORLD);        
         }
     }
     delete[] e; e=nullptr; delete[] xN; xN=nullptr;
