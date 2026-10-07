@@ -390,8 +390,8 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[], 
        }
    }
 }
-void physicalElement::step_I(double dt, int m, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool* dmpH, int myRank,
-     matrix qARcv[], matrix fSnd[], matrix* forces, bool dmpR)
+void physicalElement::step_I(double dt, int m, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool dmpH, int myRank,
+     matrix qARcv[], matrix fSnd[], matrix* forces)
 // computes the auxiliary variable gradients and physical fluxes on internal and side quadrature points
 // the internal fluxes (convective-viscous) are stored in the matrix array fluxq[3]: the i-th matrix contains the i-th component of fluxes
 // the side fluxes are stored
@@ -461,7 +461,7 @@ void physicalElement::step_I(double dt, int m, std::string nameCase, physicalEle
     //
     matrix qL, qF;
     if (LES>1) {qL=qLES(&qq,&qqAux,&qq_x,&qq_y,&qq_z,LES); qF=(*cE).getF()*qL;} // compute the LES quantities
-    if(*dmpH) // compute the possible other(statistic) variables
+    if(dmpH) // compute the possible other(statistic) variables
     {
         matrix var=varHist(nameCase,cE,d,dF,&qq,&qqAux,&qq_x,&qq_y,&qq_z,&qF,gam,Ma,LES);
         H=integralVM(var);
@@ -473,7 +473,7 @@ void physicalElement::step_I(double dt, int m, std::string nameCase, physicalEle
     {
         if (BS[iS])
         {
-            boundaryFluxes(&q_xS,&q_yS,&q_zS,iS,&BC[join.get(iS,3)],forces,dmpR);
+            boundaryFluxes(&q_xS,&q_yS,&q_zS,iS,&BC[join.get(iS,3)],forces,dmpH);
         }
         else
         {
@@ -578,7 +578,7 @@ void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, 
         }
     }
     (*cE).step_IIb(dt,m,&KA,&A,&A_0,&numFlx); //computation of mode amplitude of condervative variables (addition of surface integral)
-    if (dmpR) {res=integralV((*cE).getPHI()*(A.col(0)-A_0.col(0)));}
+    if (dmpR) {res=integralV((*cE).getPHI()*(A.col(0)-A_0.col(0)));} // computes the residual
 }
 double* physicalElement::toAM()
 {
@@ -769,16 +769,15 @@ void physicalElement::viscFluxes(matrix* dx, matrix* dy, matrix* dz, matrix* qF,
         break;
     }
 }
-void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS, boundaryCondition* BC, matrix* forces, bool dmpR)
+void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS, boundaryCondition* BC, matrix* forces, bool dmpH)
 // computation of a face normal viscous flux
 {
     int kind=(*BC).getKind(0); // the boundary type
-    int iFo; matrix stress; bool fo=false;
-//    std::cout << "kind=" << kind << " iFo=" << iFo << " dmpH=" << dmpR << std::endl;
-    if ((kind>=20)&&dmpR)
+    int iFo; matrix vStress, pStress; bool fo=false;
+    if ((kind>=20)&&dmpH)
     {
         iFo=(*BC).getKind(1);
-        if (iFo>=0) {fo=true; stress.dim(Npq2,3);}
+        if (iFo>=0) {fo=true; vStress.dim(Npq2,3); pStress.dim(Npq2,3);}
     }
     switch (kind)
     {
@@ -872,11 +871,15 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 flxS.add(i,0,bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2]);
                 if (fo)
                 {
-                    tau.trace(-3.*qInt.get(0)*T/gaM2);
-                    stress.set(i-iS*Npq2,0,(tau*n[iS]).to_row()); // computes the stress over the iS-th face in the i-th point
+                    vStress.set(i-iS*Npq2,0,(tau*n[iS]).to_row()); // computes the viscous stress over the iS-th face in the i-th point
+                    pStress.set(i-iS*Npq2,0,-(qInt.get(0)*T)*n[iS].to_row()); // computes the pressure stress over the iS-th face in the i-th point
                 }
             }
-            if (fo) {(*forces).add(iFo,0,integralSM(iS,stress));} // adds the contribution to the force
+            if (fo)
+            {
+                (*forces).add(iFo,0,integralSM(iS,vStress)); // adds the viscous contribution to the force
+                (*forces).add(iFo,3,integralSM(iS,pStress)/gaM2); // adds the pressure contribution to the force
+            }
         }
         break;
         case 22: // weak-Riemann no-slip adiabatic condition (Mengaldo et al. 2014, p.20)
@@ -929,11 +932,15 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 flxS.add(i,0,bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2]);
                 if (fo)
                 {
-                    tau.trace(-3.*qInt.get(0)*T/gaM2);
-                    stress.set(i-iS*Npq2,0,(tau*n[iS]).to_row()); // computes the stress over the iS-th face in the i-th point
+                    vStress.set(i-iS*Npq2,0,(tau*n[iS]).to_row()); // computes the viscous stress over the iS-th face in the i-th point
+                    pStress.set(i-iS*Npq2,0,-(qInt.get(0)*T)*n[iS].to_row()); // computes the pressure stress over the iS-th face in the i-th point
                 }
             }
-            if (fo) {(*forces).add(iFo,0,integralSM(iS,stress));} // adds the contribution to the force
+            if (fo)
+            {
+                (*forces).add(iFo,0,integralSM(iS,vStress)); // adds the viscous contribution to the force
+                (*forces).add(iFo,3,integralSM(iS,pStress)/gaM2); // adds the pressure contribution to the force
+            }
         }
         break;
     }

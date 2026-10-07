@@ -143,6 +143,15 @@ matrix varHist(std::string caseName, computationalElement* cE, double d, double 
             var.set(i,0,u);
         }
     }
+    if (caseName=="naca0012")
+    {
+       var.dim(Np,1);
+       for (int i=0; i<Np; i++)
+        {
+            u=(*qA).get(i,0);
+            var.set(i,0,u);
+        }
+    }
     if (caseName=="test")
     {
        var.dim(Np,1);

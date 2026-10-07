@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
     MPI_Bcast(&glb.dt,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(glb.ctr,6,MPI_INT,0,MPI_COMM_WORLD);
     MPI_Bcast(glb.sch,4,MPI_INT,0,MPI_COMM_WORLD);
-    matrix forces(glb.ctr[5],3);
+    matrix forces(glb.ctr[5],6);
     computationalElement cc(glb);
 //  input of boundary conditions
     int nBC; std::ifstream inputFileBC;
@@ -197,13 +197,11 @@ int main(int argc, char* argv[])
     {
         outputFileRes.open("./"+caseName+"/output/residual.dat",std::ios::out);
         outputFileHist.open("./"+caseName+"/output/history.dat",std::ios::out);
-        outputFileForce.open("./"+caseName+"/output/forces.dat",std::ios::out);
     }
     else
     {
         outputFileRes.open("./"+caseName+"/output/residual.dat",std::ios::app);
         outputFileHist.open("./"+caseName+"/output/history.dat",std::ios::app);
-        outputFileForce.open("./"+caseName+"/output/forces.dat",std::ios::app);
     }
     outputFileHist << std::setprecision(12);
     double t_start; if (myRank==0) {t_start=omp_get_wtime();}
@@ -235,7 +233,7 @@ int main(int argc, char* argv[])
 #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
             {
-                e[iC].step_I(glb.dt,ii,caseName,e,BC,&dmpH,myRank,qARcv,fSnd,&forces,dmpH); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
+                e[iC].step_I(glb.dt,ii,caseName,e,BC,dmpH,myRank,qARcv,fSnd,&forces); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
                 // then updates the conservative variable modal amplitude making a time substep (with volume integrals only)
             }
 // computes numerical fluxes and advances the solution
@@ -294,13 +292,11 @@ int main(int argc, char* argv[])
                 {
                     outputFileHist << " " << glH[j]/totVolume;
                 }                
-                outputFileHist << std::endl;
-                outputFileForce << i*glb.dt;
                 for (int j=0; j<glb.ctr[5]; j++)
                 {
-                    outputFileForce << " " << forces.get(j,0) << " " << forces.get(j,1) << " " << forces.get(j,2);
+                    for (int k=0; k<6; k++) {outputFileHist << " " << forces.get(j,k);}
                 }                
-                outputFileForce << std::endl;
+                outputFileHist << std::endl;
                 forces.zero();
             }
             MPI_Bcast(forces.data(),3*glb.ctr[5],MPI_DOUBLE,0,MPI_COMM_WORLD);        
