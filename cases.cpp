@@ -28,7 +28,12 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q, double gam, dou
         u_t=-(1.+1./sq(r))*sinTh+0.1/sq(r);
         u=u_r*cosTh-u_t*sinTh;
         v=u_r*sinTh+u_t*cosTh;
-        p=1.;
+        E=energy(rho,rho*u,rho*v,rho*w,p,gam,Ma);
+    }
+    if (caseName=="naca0012") // flow around a cylinder of diameter D=1
+    {
+        double r=std::sqrt(sq(x[0])+sq(x[1]));
+        if (r>1.) {u=1.;}
         E=energy(rho,rho*u,rho*v,rho*w,p,gam,Ma);
     }
     if (caseName=="taylorgreen")
