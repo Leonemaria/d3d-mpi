@@ -872,7 +872,7 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 if (fo)
                 {
                     vStress.set(i-iS*Npq2,0,(tau*n[iS]).to_row()); // computes the viscous stress over the iS-th face in the i-th point
-                    pStress.set(i-iS*Npq2,0,-(qInt.get(0)*T)*n[iS].to_row()); // computes the pressure stress over the iS-th face in the i-th point
+                    pStress.set(i-iS*Npq2,0,-(qInt.get(0)*T-1.)*n[iS].to_row()); // computes the pressure stress over the iS-th face in the i-th point
                 }
             }
             if (fo)
@@ -933,7 +933,7 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 if (fo)
                 {
                     vStress.set(i-iS*Npq2,0,(tau*n[iS]).to_row()); // computes the viscous stress over the iS-th face in the i-th point
-                    pStress.set(i-iS*Npq2,0,-(qInt.get(0)*T)*n[iS].to_row()); // computes the pressure stress over the iS-th face in the i-th point
+                    pStress.set(i-iS*Npq2,0,-(qInt.get(0)*T-1.)*n[iS].to_row()); // computes the pressure stress over the iS-th face in the i-th point
                 }
             }
             if (fo)
