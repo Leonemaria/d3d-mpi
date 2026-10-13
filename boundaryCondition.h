@@ -19,7 +19,7 @@ class boundaryCondition
 // public methods declarations
         int getKind(int i);
         double getQ(int eq);
-        void input(std::ifstream &iFile);
+        void input(std::ifstream &iFile, double a);
         double* doubleData();
         int* intData();
     private:

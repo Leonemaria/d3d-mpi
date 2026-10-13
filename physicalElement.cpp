@@ -325,14 +325,14 @@ void physicalElement::setBC(int iS)
 {
     BS[iS]=true;
 }
-void physicalElement::setIniCond(std::string caseName)
+void physicalElement::setIniCond(std::string caseName, const global& g)
 {
     vector3D xP;
     matrix qq(Npq,nEq);
     for (int iP=0; iP<Npq; iP++)
     {
         xP=getX((*cE).getRq(iP));
-        iniFunc(caseName,iP,xP,&qq,gam,Ma);
+        iniFunc(caseName,iP,xP,&qq,g);
     }
     A=(*cE).getE()*qq;
 }

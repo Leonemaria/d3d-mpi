@@ -1,7 +1,8 @@
 //cases.cpp
 #include "cases.h"
-void iniFunc(std::string caseName, int i, vector3D x, matrix* q, double gam, double Ma)
+void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  const global& g)
 {
+    double Ma=g.phy[0], gam=g.phy[4];
     double rho=1., u=0., v=0., w=0., E=1., p=1.;
     if (caseName=="test")
     {
@@ -32,8 +33,9 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q, double gam, dou
     }
     if (caseName=="naca0012") // flow around a cylinder of diameter D=1
     {
+        double alph=g.phy[6]*radPerDeg;
         double r=std::sqrt(sq(x[0])+sq(x[1]));
-        if (r>1.) {u=1.;}
+        if (r>1.) {u=cos(alph); v=sin(alph);}
         E=energy(rho,rho*u,rho*v,rho*w,p,gam,Ma);
     }
     if (caseName=="taylorgreen")

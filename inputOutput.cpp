@@ -6,7 +6,7 @@ void initialConditions(std::string caseName, int nCells, physicalElement e[], co
     {
         for (int iC=0; iC<nCells; iC++)
         {
-            e[iC].setIniCond(caseName);
+            e[iC].setIniCond(caseName,glb);
         }
     }
     else
@@ -32,8 +32,9 @@ void readPhysics(std::ifstream &fin, global& glb)
     fin >> glb.phy[1]; skipLine(fin, 1); // reference Reynolds Number
     fin >> glb.phy[2]; skipLine(fin, 1); // reference Froude Number
     fin >> glb.phy[3]; skipLine(fin, 1); // reference Prandtl Number
-    fin >> glb.phy[4]; skipLine(fin, 1);// specific heats ratio
-    fin >> glb.phy[5]; skipLine(fin, 1);  // Sutherland temperature ratio
+    fin >> glb.phy[4]; skipLine(fin, 1); // specific heats ratio
+    fin >> glb.phy[5]; skipLine(fin, 1); // Sutherland temperature ratio
+    fin >> glb.phy[6];                   // angle of attack
 }
 void readRun(std::ifstream &fin, global& glb)
 {

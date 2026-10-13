@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
     boundaryCondition BC[nBC];
     if (myRank==0)
     {
-        for (int i=1; i<nBC; i++) {BC[i].input(inputFileBC);}
+        for (int i=1; i<nBC; i++) {BC[i].input(inputFileBC,glb.phy[6]);}
     }
     for (int i=1; i<nBC; i++)
     {
