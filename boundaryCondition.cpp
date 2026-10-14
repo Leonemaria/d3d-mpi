@@ -20,17 +20,20 @@ double boundaryCondition::getQ(int eq)
 {
     return qB[eq];
 }
-void boundaryCondition::input(std::ifstream &iFile)
+void boundaryCondition::input(std::ifstream &iFile, double a)
 {
     iFile >> kind[0]; skipLine(iFile, 1);
     switch(kind[0])
     {
         case(11): // Weak-Riemann farfield (inlet/outlet) condition
+        {
+            double alpha=a*radPerDeg;
             iFile >> qB[0]; // rho_inf
             iFile >> qB[5]; // p_inf
-            iFile >> qB[6]; // u_inf
-            iFile >> qB[7]; // v_inf
+            iFile >> qB[6]; qB[6]*=cos(alpha); // u_inf
+            iFile >> qB[7]; qB[7]*=sin(alpha); // v_inf
             iFile >> qB[8]; // w_inf
+        }
         break;
         case(21): // Weak-Riemann isothermal no-slip
             iFile >> qB[6]; // u_wall
