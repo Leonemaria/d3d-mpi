@@ -27,11 +27,13 @@ void boundaryCondition::input(std::ifstream &iFile, double a)
     {
         case(11): // Weak-Riemann farfield (inlet/outlet) condition
         {
-            double alpha=a*radPerDeg;
+            double alph=a*radPerDeg, u, v;
             iFile >> qB[0]; // rho_inf
             iFile >> qB[5]; // p_inf
-            iFile >> qB[6]; qB[6]*=cos(alpha); // u_inf
-            iFile >> qB[7]; qB[7]*=sin(alpha); // v_inf
+            iFile >> u; // u_inf at Alpha=0
+            iFile >> v; // v_inf at Alpha=0
+            qB[6]=u*cos(alph)-v*sin(alph); // u_inf with Alpha correction
+            qB[7]=u*sin(alph)+v*cos(alph); // v_inf with Alpha correction
             iFile >> qB[8]; // w_inf
         }
         break;
