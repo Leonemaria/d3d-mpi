@@ -42,14 +42,6 @@ int main(int argc, char* argv[])
     MPI_Bcast(&nameSize,1,MPI_INT,0,MPI_COMM_WORLD);
     caseName.resize(nameSize);
     MPI_Bcast(&caseName[0],nameSize,MPI_CHAR,0,MPI_COMM_WORLD);
-    // imput of physical parametrs
-    if (myRank==0)
-    {
-        s="./"+caseName+"/input/physics.dat"; std::ifstream physicsFile(s); chk(physicsFile,s); // physics data
-        readPhysics(physicsFile,glb);
-        physicsFile.close();
-    }
-    MPI_Bcast(&glb.phy,6,MPI_DOUBLE,0,MPI_COMM_WORLD);
 // input of run data
     if (myRank==0)
     {
@@ -67,7 +59,15 @@ int main(int argc, char* argv[])
     MPI_Bcast(glb.ctr,6,MPI_INT,0,MPI_COMM_WORLD);
     MPI_Bcast(glb.sch,4,MPI_INT,0,MPI_COMM_WORLD);
     matrix forces(glb.ctr[5],6);
-    computationalElement cc(glb);
+    // imput of physical parametrs
+    if (myRank==0)
+    {
+        s="./"+caseName+"/input/physics.dat"; std::ifstream physicsFile(s); chk(physicsFile,s); // physics data
+        readPhysics(physicsFile,glb);
+        physicsFile.close();
+    }
+    MPI_Bcast(&glb.phy,6,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    computationalElement cc(glb); // initializes the computational element
 //  input of boundary conditions
     int nBC; std::ifstream inputFileBC;
     if (myRank==0)
