@@ -14,10 +14,6 @@ struct global
         // phy[4]: air specific heats ratio gamma            
         // phy[5]: Suherland temperature ratio         
         // phy[6]: angle of attack
-    vector3D rDyn[3];
-        // rDyn[0]: moving system velocity
-        // rDyn[1]: moving system angular velocity
-        // rDyn[2]: rotation center
     int ctr[6]; // array of run controls
      // ctr[0]: initial number of time steps
      // ctr[1]: final number of time steps
