@@ -67,9 +67,6 @@ int main(int argc, char* argv[])
         physicsFile.close();
     }
     MPI_Bcast(&glb.phy,7,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Bcast(glb.rDyn[0].data(),3,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Bcast(glb.rDyn[1].data(),3,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Bcast(glb.rDyn[2].data(),3,MPI_DOUBLE,0,MPI_COMM_WORLD);
 //
     computationalElement cc(glb); // initializes the computational element
 //  input of boundary conditions
