@@ -1,7 +1,6 @@
 #ifndef GLOBAL_H
 #define GLOBAL_H
 // global.h
-#include "vectors.h"
 //
 struct global
 {
