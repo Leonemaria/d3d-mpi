@@ -53,7 +53,6 @@ int main(int argc, char* argv[])
         std::cout << "src=" << glb.sch[3] << std::endl;
         std::cout << "dt=" << glb.dt << std::endl;
         std::cout << "LES model=" << glb.sch[1] << std::endl;
-        std::cout << "Alpha=" << glb.phy[6] << std::endl;
     }
     MPI_Bcast(&glb.dt,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(glb.ctr,6,MPI_INT,0,MPI_COMM_WORLD);
@@ -65,6 +64,7 @@ int main(int argc, char* argv[])
         s="./"+caseName+"/input/physics.dat"; std::ifstream physicsFile(s); chk(physicsFile,s); // physics data
         readPhysics(physicsFile,glb);
         physicsFile.close();
+        std::cout << "Alpha=" << glb.phy[6] << std::endl;
     }
     MPI_Bcast(&glb.phy,7,MPI_DOUBLE,0,MPI_COMM_WORLD);
 //
