@@ -35,12 +35,6 @@ void readPhysics(std::ifstream &fin, global& glb)
     fin >> glb.phy[4]; skipLine(fin, 1); // specific heats ratio
     fin >> glb.phy[5]; skipLine(fin, 1); // Sutherland temperature ratio
     fin >> glb.phy[6];                   // angle of attack
-    if (glb.sch[4]==1) // if relative dynamics is applied
-    {
-        fin >> glb.rDyn[0][0] >> glb.rDyn[0][1] >> glb.rDyn[0][2]; skipLine(fin, 1); // moving system velocity
-        fin >> glb.rDyn[1][0] >> glb.rDyn[1][1] >> glb.rDyn[1][2]; skipLine(fin, 1); // moving system angular velocity
-        fin >> glb.rDyn[2][0] >> glb.rDyn[2][1] >> glb.rDyn[2][2]; skipLine(fin, 1); // rotation center
-    }
 }
 void readRun(std::ifstream &fin, global& glb)
 {
