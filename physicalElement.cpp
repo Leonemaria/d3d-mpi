@@ -938,8 +938,11 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
             }
             if (fo)
             {
-                (*forces).add(iFo,0,integralSM(iS,vStress)); // adds the viscous contribution to the force
-                (*forces).add(iFo,3,integralSM(iS,pStress)/gaM2); // adds the pressure contribution to the force
+                #pragma omp critical
+                {
+                    (*forces).add(iFo,0,integralSM(iS,vStress)); // adds the viscous contribution to the force
+                    (*forces).add(iFo,3,integralSM(iS,pStress)/gaM2); // adds the pressure contribution to the force
+                }
             }
         }
         break;

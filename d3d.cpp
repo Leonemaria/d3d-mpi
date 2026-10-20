@@ -217,22 +217,22 @@ int main(int argc, char* argv[])
            if ((ii==4)&&(i % glb.ctr[3]==0)){dmpR=true;} else {dmpR=false;}
            if ((ii==0)&&(i % glb.ctr[4]==0)){dmpH=true;} else {dmpH=false;}
 // compute (for all elements) conservative and auxiliary (primitive) variables on side quadrature points
-#pragma omp parallel for schedule(static)
+            #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
             {
                 e[iC].step_0(BC,myRank,qSnd,qASnd); // computes conservative and auxiliary (primitive) variables on side quadrature points
             }
-    for (int i=0; i<nJnPr; i++) // exchange the data between the processes
-    {
-        MPI_Isend(qSnd[i].data(),qSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*4]); // the linking indices are sent
-        MPI_Isend(qASnd[i].data(),qASnd[i].size(),MPI_DOUBLE,jnPr[i],2,MPI_COMM_WORLD,&rqs[i*4+1]); // the linking indices are sent
-        MPI_Irecv(qRcv[i].data(),qRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*4+2]); // the linking indices are received
-        MPI_Irecv(qARcv[i].data(),qARcv[i].size(),MPI_DOUBLE,jnPr[i],2,MPI_COMM_WORLD,&rqs[i*4+3]); // the linking indices are received
-    }
-    MPI_Waitall(4*nJnPr,rqs,MPI_STATUSES_IGNORE);
-    MPI_Barrier(MPI_COMM_WORLD);   
-
-#pragma omp parallel for schedule(static)
+            for (int i=0; i<nJnPr; i++) // exchange the data between the processes
+            {
+                MPI_Isend(qSnd[i].data(),qSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*4]); // the linking indices are sent
+                MPI_Isend(qASnd[i].data(),qASnd[i].size(),MPI_DOUBLE,jnPr[i],2,MPI_COMM_WORLD,&rqs[i*4+1]); // the linking indices are sent
+                MPI_Irecv(qRcv[i].data(),qRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*4+2]); // the linking indices are received
+                MPI_Irecv(qARcv[i].data(),qARcv[i].size(),MPI_DOUBLE,jnPr[i],2,MPI_COMM_WORLD,&rqs[i*4+3]); // the linking indices are received
+            }
+            MPI_Waitall(4*nJnPr,rqs,MPI_STATUSES_IGNORE);
+            MPI_Barrier(MPI_COMM_WORLD);   
+//
+            #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
             {
                 e[iC].step_I(glb.dt,ii,caseName,e,BC,dmpH,myRank,qARcv,fSnd,&forces); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
@@ -240,15 +240,15 @@ int main(int argc, char* argv[])
             }
 // computes numerical fluxes and advances the solution
 
-    for (int i=0; i<nJnPr; i++) // exchange the data between the processes
-    {
-        MPI_Isend(fSnd[i].data(),fSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*2]); // the linking indices are sent
-        MPI_Irecv(fRcv[i].data(),fRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*2+1]); // the linking indices are received
-    }
-    MPI_Waitall(2*nJnPr,rqs,MPI_STATUSES_IGNORE);
-    MPI_Barrier(MPI_COMM_WORLD);
+            for (int i=0; i<nJnPr; i++) // exchange the data between the processes
+            {
+                MPI_Isend(fSnd[i].data(),fSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*2]); // the linking indices are sent
+                MPI_Irecv(fRcv[i].data(),fRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*2+1]); // the linking indices are received
+            }
+            MPI_Waitall(2*nJnPr,rqs,MPI_STATUSES_IGNORE);
+            MPI_Barrier(MPI_COMM_WORLD);
 
-#pragma omp parallel for schedule(static)
+            #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
             {
                 e[iC].step_II(glb.dt,ii,e,dmpR,myRank,qRcv,fRcv); // completes the substep adding surface integral
@@ -299,9 +299,8 @@ int main(int argc, char* argv[])
                     for (int k=0; k<6; k++) {outputFileHist << " " << forces.get(j,k);}
                 }                
                 outputFileHist << std::endl;
-                forces.zero();
             }
-            MPI_Bcast(forces.data(),3*glb.ctr[5],MPI_DOUBLE,0,MPI_COMM_WORLD);        
+            forces.zero();
         }
     }
     delete[] e; e=nullptr; delete[] xN; xN=nullptr;
