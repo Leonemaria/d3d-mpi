@@ -209,6 +209,7 @@ int main(int argc, char* argv[])
     double t_start; if (myRank==0) {t_start=omp_get_wtime();}
     bool dmpR, dmpH=false;
     if (glb.ctr[0]==0) {printOut(caseName,e,nCells,0,glb,myRank);}
+    double time;
 // start iterations in time
     for (int i=glb.ctr[0]+1; i<(glb.ctr[1]+1); i++)
     {
@@ -235,7 +236,7 @@ int main(int argc, char* argv[])
             #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
             {
-                e[iC].step_I(glb.dt,ii,caseName,e,BC,dmpH,myRank,qARcv,fSnd,&forces); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
+                e[iC].step_I(glb.dt,ii,cc.time(i,ii,glb.dt),caseName,e,BC,dmpH,myRank,qARcv,fSnd,&forces); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
                 // then updates the conservative variable modal amplitude making a time substep (with volume integrals only)
             }
 // computes numerical fluxes and advances the solution

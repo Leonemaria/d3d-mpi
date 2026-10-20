@@ -60,14 +60,15 @@ class physicalElement
         void setIniCond(std::string caseName, const global& g);
         void setJoin(int i, int j, int k);
         void step_0(boundaryCondition BC[], int myRank, matrix qSnd[], matrix qASnd[]);
-        void step_I(double dt, int m, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool dmpH, int myRank, matrix qARcv[], matrix fSnd[], matrix* forces);
+        void step_I(double dt, int m, double time, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool dmpH, int myRank,
+                    matrix qARcv[], matrix fSnd[], matrix* forces);
         void step_II(double dt, int m, physicalElement e[], bool dmpR, int myRank, matrix qRcv[], matrix fRcv[]);
         double* toAM();
         void viscousFlux(matrix vF[], double u, double v, double w, symTensor tau, vector3D heat);
         void viscousFlux(matrix vF[], double u, double v, double w, symTensor tau, vector3D heat, vector3D taK);
         void viscFluxes(matrix flxq[], matrix* qq, matrix* qA, matrix* dx, matrix* dy, matrix* dz, matrix* qF);
         void viscFluxes(matrix* dx, matrix* dy, matrix* dz, matrix* qF, int iS);
-        void boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS, boundaryCondition* BC, matrix* forces, bool dmpH);
+        void boundaryFluxes(double time, matrix* dx, matrix* dy, matrix* dz, int iS, boundaryCondition* BC, matrix* forces, bool dmpH);
 
     private:
 // private variable declarations

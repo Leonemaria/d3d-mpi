@@ -390,7 +390,7 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[], 
        }
    }
 }
-void physicalElement::step_I(double dt, int m, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool dmpH, int myRank,
+void physicalElement::step_I(double dt, int m, double time, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool dmpH, int myRank,
      matrix qARcv[], matrix fSnd[], matrix* forces)
 // computes the auxiliary variable gradients and physical fluxes on internal and side quadrature points
 // the internal fluxes (convective-viscous) are stored in the matrix array fluxq[3]: the i-th matrix contains the i-th component of fluxes
@@ -473,7 +473,7 @@ void physicalElement::step_I(double dt, int m, std::string nameCase, physicalEle
     {
         if (BS[iS])
         {
-            boundaryFluxes(&q_xS,&q_yS,&q_zS,iS,&BC[join.get(iS,3)],forces,dmpH);
+            boundaryFluxes(time,&q_xS,&q_yS,&q_zS,iS,&BC[join.get(iS,3)],forces,dmpH);
         }
         else
         {
@@ -769,7 +769,7 @@ void physicalElement::viscFluxes(matrix* dx, matrix* dy, matrix* dz, matrix* qF,
         break;
     }
 }
-void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS, boundaryCondition* BC, matrix* forces, bool dmpH)
+void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix* dz, int iS, boundaryCondition* BC, matrix* forces, bool dmpH)
 // computation of a face normal viscous flux
 {
     int kind=(*BC).getKind(0); // the boundary type
@@ -938,11 +938,8 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
             }
             if (fo)
             {
-                #pragma omp critical
-                {
-                    (*forces).add(iFo,0,integralSM(iS,vStress)); // adds the viscous contribution to the force
-                    (*forces).add(iFo,3,integralSM(iS,pStress)/gaM2); // adds the pressure contribution to the force
-                }
+                (*forces).add(iFo,0,integralSM(iS,vStress)); // adds the viscous contribution to the force
+                (*forces).add(iFo,3,integralSM(iS,pStress)/gaM2); // adds the pressure contribution to the force
             }
         }
         break;

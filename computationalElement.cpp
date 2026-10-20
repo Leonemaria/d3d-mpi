@@ -200,7 +200,8 @@ void computationalElement::step_IIa(double d, int m, matrix* KA, matrix* A, matr
             (*A)=(*KA)+0.386708617503269*(*A)+subStep_a(0.226007483236906*d,f,B,r_x,r_y,r_z);
          break;
     }
-}void computationalElement::step_IIb(double d, int m, matrix* KA, matrix* A, matrix* A_0, matrix* fS)
+}
+void computationalElement::step_IIb(double d, int m, matrix* KA, matrix* A, matrix* A_0, matrix* fS)
 {
 // five step fourth order Runge Kutta scheme (addition of surface integral)
     switch (m)
@@ -221,4 +222,24 @@ void computationalElement::step_IIa(double d, int m, matrix* KA, matrix* A, matr
             (*A)+=subStep_b(0.226007483236906*d,fS);
          break;
     }
+}
+int computationalElement::time(int i, int m, double d) // RK stage time for non autononous cases (Liu and Song 2025, eq.2.2 and the following line)
+{
+    double t; i--;
+    switch(m)
+    {
+        case(1):
+            t=d*(i+0.39175222657189);
+        break;
+        case(2):
+            t=d*(i+0.58607968931154);
+        break;
+        case(3):
+            t=d*(i+0.47454236312140);
+        break;
+        case(4):
+            t=d*(i+0.93501063096765);
+        break;
+    }
+    return t;        
 }

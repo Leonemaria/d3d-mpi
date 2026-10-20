@@ -34,6 +34,7 @@ class computationalElement
         matrix subStep_a(double dt, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z);
         matrix subStep_b(double dt, matrix* fS);
         int extIndex(int i, int j);
+        int time(int i, int m, double d);
     private:
 // private variable declarations
         int src;
