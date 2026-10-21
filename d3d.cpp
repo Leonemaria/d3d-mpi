@@ -285,9 +285,9 @@ int main(int argc, char* argv[])
             {
                H+=e[iC].getHist();
             }
-            double glH[H.nC()]={0.}; matrix glFo(glb.ctr[5],3);
+            double glH[H.nC()]={0.}; double glFo[6*glb.ctr[5]]={0.};
             MPI_Reduce(H.data(),glH,H.nC(),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
-            MPI_Reduce(forces.data(),glFo.data(),3*glb.ctr[5],MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+            MPI_Reduce(forces.data(),glFo,3*glb.ctr[5],MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
             if(myRank==0)
             {
                 outputFileHist << i*glb.dt;
@@ -295,9 +295,9 @@ int main(int argc, char* argv[])
                 {
                     outputFileHist << " " << glH[j]/totVolume;
                 }                
-                for (int j=0; j<glb.ctr[5]; j++)
+                for (int j=0; j<6*glb.ctr[5]; j++)
                 {
-                    for (int k=0; k<6; k++) {outputFileHist << " " << forces.get(j,k);}
+                    for (int k=0; k<6; k++) {outputFileHist << " " << glFo[j];}
                 }                
                 outputFileHist << std::endl;
             }
