@@ -287,7 +287,7 @@ int main(int argc, char* argv[])
             }
             double glH[H.nC()]={0.}; double glFo[6*glb.ctr[5]]={0.};
             MPI_Reduce(H.data(),glH,H.nC(),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
-            MPI_Reduce(forces.data(),glFo,3*glb.ctr[5],MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+            MPI_Reduce(forces.data(),glFo,6*glb.ctr[5],MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
             if(myRank==0)
             {
                 outputFileHist << i*glb.dt;
