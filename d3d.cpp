@@ -297,7 +297,7 @@ int main(int argc, char* argv[])
                 }                
                 for (int j=0; j<6*glb.ctr[5]; j++)
                 {
-                    for (int k=0; k<6; k++) {outputFileHist << " " << glFo[j];}
+                    outputFileHist << " " << glFo[j];
                 }                
                 outputFileHist << std::endl;
             }
