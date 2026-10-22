@@ -84,7 +84,7 @@ class physicalElement
         intMatrix join;
         vector3D x_r, x_s, x_t, r_x, r_y, r_z;
         matrix qS, qAuxS;
-        matrix A, KA, A_0, B;
+        matrix A, KA, A_0;
         vector3D n[4];
         computationalElement* cE; // pointer to the computational element
         double Ma, Re, Fr, Pr, gam, gaM2, S;

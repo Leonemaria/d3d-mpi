@@ -64,9 +64,7 @@ void physicalElement::init(int my, computationalElement *c, vector3D x[], int iV
             setBC(iS);
             if ((BC[join.get(iS,3)].getKind(0)==11)&&(rot[iS].size()==0)) {mkRot(iS);}  
         }    
-    }
-    if (src>0) {B.dim(Npq,nEq);}
-    
+    }    
 }
 double physicalElement::CFL(double dt)
 {
@@ -494,10 +492,8 @@ void physicalElement::step_I(double dt, int m, double time, std::string nameCase
         }
     }
     //
-    // compute the convective part of physical fluxes on quadrature points
     convFluxes(flxq,&qq); // add convective flux on volume quadrature points
-    
-    if (src>0) {srcFunc(nameCase,&B,&qq,gam,Ma,Re);}   
+    matrix B; if (src>0) {B.dim(Npq,nEq); srcFunc(nameCase,&B,&qq,gam,Ma,Re);} // possibly computes the sources terms
     (*cE).step_IIa(dt,m,&KA,&A,&A_0,flxq,&B,r_x,r_y,r_z); //computation of mode amplitude of condervative variables (just volume integrals) 
 }
 
