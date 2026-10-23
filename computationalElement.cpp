@@ -68,16 +68,6 @@ computationalElement::computationalElement(const global& glb)
             D_t.set(j,i,w3D.get(i)*dPsi3Ddt(iInd[j],jInd[j],kInd[j],rq[i]));
         }
     }
-    matrix EF(NmF,Npq); matrix PHIF(Npq,NmF);
-    for (int i=0; i<Npq; i++)
-    {
-        for (int j=0; j<NmF; j++)
-        {
-            PHIF.set(i,j,psi3D(iInd[j],jInd[j],kInd[j],rq[i]));
-            EF.set(j,i,w3D.get(i)*psi3D(iInd[j],jInd[j],kInd[j],rq[i]));
-        }
-    }
-    F=PHIF*EF; // filtering matrix for points inside the volume
 //
     gP=gaussPointsAndWeights2D(N*2);  // reads the points and weights for Gauss face quadrature of order oq2
     Npq2=gP.nR(); vector3D rq2[Npq2*4];
@@ -114,15 +104,6 @@ computationalElement::computationalElement(const global& glb)
            E2.set(j,i,w2D.get(i)*psi3D(iInd[j],jInd[j],kInd[j],rq2[i]));
         }
     }
-    matrix PHIF2(4*Npq2,NmF);
-    for (int i=0; i<Npq2*4; i++)
-    {
-        for (int j=0; j<NmF; j++)
-        {
-            PHIF2.set(i,j,psi3D(iInd[j],jInd[j],kInd[j],rq2[i]));
-        }
-    }
-    F2=PHIF2*EF; //filtering matrix for points on the sides
 //    
 }
 // destructor of computationalElement
@@ -150,14 +131,6 @@ matrix computationalElement::getPHI2()
 matrix computationalElement::getE()
 {
     return E;
-}
-matrix computationalElement::getF()
-{
-    return F;
-}
-matrix computationalElement::getF2()
-{
-    return F2;
 }
 matrix computationalElement::wQuad(int d)
 {

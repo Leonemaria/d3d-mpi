@@ -80,7 +80,7 @@ void srcFunc(std::string caseName, matrix* B, matrix* q, double gam, double Ma, 
         }
     }
 }
-matrix varHist(std::string caseName, computationalElement* cE, double d, double dF, matrix *q, matrix* qA, matrix* q_x, matrix* q_y, matrix* q_z, matrix* qF,
+matrix varHist(std::string caseName, computationalElement* cE, double d, double dF, matrix *q, matrix* qA, matrix* q_x, matrix* q_y, matrix* q_z,
                double S, double Re, int LES)
 {
     double rho, u, v, w, T, mu, mut=0., s;
@@ -103,20 +103,6 @@ matrix varHist(std::string caseName, computationalElement* cE, double d, double 
                 case 1:
                     mut=sq(0.1*d)*Sr.Frobenius()/std::sqrt(2.);
                     tau=(mu+mut)*Sr.noTrace();
-                break;
-                case 2:
-                {
-                    double CS, CI, CQ, CJ;
-                    s=Sr.Frobenius()/std::sqrt(2.);
-                    double rhoD2S=(*q).get(i,0)*sq(d)*s;
-                    coeffGermano(d,dF,(*qF).row(i),&CS,&CI,&CQ,&CJ);
-                    CS=std::min(0.2,CS); // clipping on CS
-                    double mut=std::max(-mu,CS*rhoD2S); // clipping on mut
-                    tau=(mu+mut)*Sr.noTrace();
-                    CI=std::clamp(CI,0.,0.1);
-                    double isoTau=-CI*rhoD2S*s;
-                    tau.add(0,0,isoTau); tau.add(1,1,isoTau); tau.add(2,2,isoTau);
-                }
                 break;
             }
             var.set(i,0,0.5*rho*(sq(u)+sq(v)+sq(w))-tau.trace()/2.);

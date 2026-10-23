@@ -51,7 +51,6 @@ void physicalElement::init(int my, computationalElement *c, vector3D x[], int iV
     A.dim(Nm,nEq);
     flxS.dim(4*Npq2,nEq);  // dimensioning of the face physical fluxes matrices (convective and viscous)
     qS.dim(4*Npq2,nEq); // dimensioning of the matrices containing the conservative variables interpolated over the face quadrature points
-    qAuxS.dim(4*Npq2,nAux); // dimensioning of the matrices containing the auxiliary variables interpolated over the face quadrature points
     //
     if (CIF>0)
     {
@@ -118,13 +117,13 @@ intMatrix physicalElement::getJoin()
 {
     return join;
 }
-double physicalElement::getQAS(int i, int eq)
-{
-    return qAuxS.get(i,eq);
-}
 matrix physicalElement::getQAS(int i)
 {
-    return qAuxS.row(i);
+    matrix qAS(1,4);
+    double rho=qS.get(i,0), rhoU=qS.get(i,1), rhoV=qS.get(i,2), rhoW=qS.get(i,3);
+    qAS.set(0,rhoU/rho); qAS.set(1,rhoV/rho); qAS.set(2,rhoW/rho);
+    qAS.set(3,pressure(rho,rhoU,rhoV,rhoW,qS.get(i,4),gam,Ma)/rho);
+    return qAS;   
 }
 double physicalElement::getQS(int i, int eq)
 {
@@ -341,52 +340,22 @@ void physicalElement::setJoin(int i, int j, int k)
 void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[], matrix qASnd[])
 //void physicalElement::step_0(boundaryCondition BC[])
 // computes conservative and auxiliary (primitive) variables on side quadrature points
-// the conservative variables are stored in the matrix qS while the auxiliary variables are stored in the matrix qAuxS
 {
     double rho;
     qS=(*cE).getPHI2()*A; // projects nodal solution on quadrature points: qS is the matrix containing side values (in quadrature points)
-    for (int i=0; i<Npq2*4; i++)
-    {
-        rho=qS.get(i,0);
-        qAuxS.set(i,0,qS.get(i,1)/rho); qAuxS.set(i,1,qS.get(i,2)/rho); qAuxS.set(i,2,qS.get(i,3)/rho); // set the side values (in i-th quadrature point) of the three first auxiliary variables (u, v and w) in qAuxS matrix
-        qAuxS.set(i,3,pressure(qS.row(i),gam,Ma)/rho); // set the side values (in i-th quadrature point) of the fourth auxiliary variables (T) in qAuxS matrix
-    }
     for (int iS=0; iS<4; iS++)
     {
-        if (BS[iS])
+        if (join.get(iS,0)!=myRank)
         {
-            int kind=BC[join.get(iS,3)].getKind(0);
-            switch (kind)
+            int jPr=join.get(iS,1);
+            int jFc=join.get(iS,2);
+            for (int i=0; i<Npq2; i++)
             {
-                case 21: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014, p.18 and 19)
-                    for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
-                    {
-                        for (int eq=0; eq<nAux; eq++) {qAuxS.set(i,eq,BC[join.get(iS,3)].getQ(eq+nEq+1));}
-                    }
-                break;
-                case 22: // weak-Riemann no-slip adiabatic condition (Mengaldo et al. 2014, p.20)
-                         // for this case the temperature is not set to a specific value (so it is kept as the internal value)
-                    for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
-                    {
-                        for (int eq=0; eq<nAux-1; eq++) {qAuxS.set(i,eq,BC[join.get(iS,3)].getQ(eq+nEq+1));}
-                    }
-                break;
+                qSnd[jPr].set(jFc*Npq2+i,0,qS.row(iS*Npq2+i));
+                qASnd[jPr].set(jFc*Npq2+i,0,getQAS(iS*Npq2+i));
             }
-        }
-        else        
-        {
-            if (join.get(iS,0)!=myRank)
-            {
-                int jPr=join.get(iS,1);
-                int jFc=join.get(iS,2);
-                for (int i=0; i<Npq2; i++)
-                {
-                    qSnd[jPr].set(jFc*Npq2+i,0,qS.row(iS*Npq2+i));                    
-                    qASnd[jPr].set(jFc*Npq2+i,0,qAuxS.row(iS*Npq2+i));                    
-                }
-            }        
-       }
-   }
+        }        
+    }
 }
 void physicalElement::step_I(double dt, int m, double time, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool dmpH, int myRank,
      matrix qARcv[], matrix fSnd[], matrix* forces)
@@ -403,9 +372,19 @@ void physicalElement::step_I(double dt, int m, double time, std::string nameCase
     {
         if (BS[iS])
         {
+            int kind=BC[join.get(iS,3)].getKind(0);
             for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
             {
-                qMed=qAuxS.row(i);                    
+                switch (kind)
+                {
+                    case 21: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014, p.18 and 19)
+                        for (int eq=0; eq<nAux; eq++) {qMed.set(eq,BC[join.get(iS,3)].getQ(eq+nEq+1));}
+                    break;
+                    case 22: // weak-Riemann no-slip adiabatic condition (Mengaldo et al. 2014, p.20)
+                             // for this case the temperature is not set to a specific value (so it is kept as the internal value)
+                        for (int eq=0; eq<nAux-1; eq++) {qMed.set(eq,BC[join.get(iS,3)].getQ(eq+nEq+1));}
+                    break;
+                }
                 numFlx[0].set(i,0,JS[iS]*qMed*n[iS][0]);
                 numFlx[1].set(i,0,JS[iS]*qMed*n[iS][1]);
                 numFlx[2].set(i,0,JS[iS]*qMed*n[iS][2]);
@@ -420,7 +399,7 @@ void physicalElement::step_I(double dt, int m, double time, std::string nameCase
                 for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
                 {
                     iExt=(*cE).extIndex(i%Npq2,join.get(iS,3))+join.get(iS,2)*Npq2; // i index of the point on the connected element side
-                    qMed=0.5*(qAuxS.row(i)+e[eJ].getQAS(iExt));
+                    qMed=0.5*(getQAS(i)+e[eJ].getQAS(iExt));
                     numFlx[0].set(i,0,JS[iS]*qMed*n[iS][0]);
                     numFlx[1].set(i,0,JS[iS]*qMed*n[iS][1]);
                     numFlx[2].set(i,0,JS[iS]*qMed*n[iS][2]);
@@ -434,7 +413,7 @@ void physicalElement::step_I(double dt, int m, double time, std::string nameCase
                 for (int i=0; i<Npq2; i++)
                 {
                     iExt=(*cE).extIndex(i,join.get(iS,3)); // i index of the point on the connected element side
-                    qMed=0.5*(qAuxS.row(iS*Npq2+i)+qARcv[jPr].row(jFc*Npq2+iExt));
+                    qMed=0.5*(getQAS(iS*Npq2+i)+qARcv[jPr].row(jFc*Npq2+iExt));
                     numFlx[0].set(iS*Npq2+i,0,JS[iS]*qMed*n[iS][0]);
                     numFlx[1].set(iS*Npq2+i,0,JS[iS]*qMed*n[iS][1]);
                     numFlx[2].set(iS*Npq2+i,0,JS[iS]*qMed*n[iS][2]);
@@ -457,16 +436,13 @@ void physicalElement::step_I(double dt, int m, double time, std::string nameCase
     matrix qq_x=(*cE).getPHI()*A_x; matrix qq_y=(*cE).getPHI()*A_y; matrix qq_z=(*cE).getPHI()*A_z; // compute the aux. variable gradients on volume quadrature points
     matrix q_xS=(*cE).getPHI2()*A_x; matrix q_yS=(*cE).getPHI2()*A_y; matrix q_zS=(*cE).getPHI2()*A_z; // computes auxiliary variable gradients on side quadrature points
     //
-    matrix qL, qF;
-    if (LES>1) {qL=qLES(&qq,&qqAux,&qq_x,&qq_y,&qq_z,LES); qF=(*cE).getF()*qL;} // compute the LES quantities
     if(dmpH) // compute the possible other(statistic) variables
     {
-        matrix var=varHist(nameCase,cE,d,dF,&qq,&qqAux,&qq_x,&qq_y,&qq_z,&qF,gam,Ma,LES);
+        matrix var=varHist(nameCase,cE,d,dF,&qq,&qqAux,&qq_x,&qq_y,&qq_z,gam,Ma,LES);
         H=integralVM(var);
     }     
     // compute the viscous part (including sgs) of physical fluxes on quadrature points
-    viscFluxes(flxq,&qq,&qqAux,&qq_x,&qq_y,&qq_z,&qF); // viscous/sgs flux on internal quadrature points
-    if (LES>1) {qF=(*cE).getF2()*qL;}
+    viscFluxes(flxq,&qq,&qqAux,&qq_x,&qq_y,&qq_z); // viscous/sgs flux on internal quadrature points
     for (int iS=0; iS<4; iS++)
     {
         if (BS[iS])
@@ -475,7 +451,7 @@ void physicalElement::step_I(double dt, int m, double time, std::string nameCase
         }
         else
         {
-            viscFluxes(&q_xS,&q_yS,&q_zS,&qF,iS); // viscous/sgs flux on side quadrature points
+            viscFluxes(&q_xS,&q_yS,&q_zS,iS); // viscous/sgs flux on side quadrature points
             if (CIF==0) {convFluxes(iS);}  // add convective flux on side quadrature points
         }
     }
@@ -496,7 +472,7 @@ void physicalElement::step_I(double dt, int m, double time, std::string nameCase
     matrix B; if (src>0) {B.dim(Npq,nEq); srcFunc(nameCase,&B,&qq,gam,Ma,Re);} // possibly computes the sources terms
     (*cE).step_IIa(dt,m,&KA,&A,&A_0,flxq,&B,r_x,r_y,r_z); //computation of mode amplitude of condervative variables (just volume integrals) 
 }
-
+//
 void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, int myRank, matrix qRcv[], matrix fRcv[])
 {
     matrix numFlx(4*Npq2,nEq);
@@ -600,7 +576,7 @@ void physicalElement::viscousFlux(matrix vF[], double u, double v, double w, sym
     vF[1].set(4,-gaM2*(taK[1]+u*tau.get(1,0)+v*tau.get(1,1)+w*tau.get(1,2))+heat[1]);
     vF[2].set(4,-gaM2*(taK[2]+u*tau.get(2,0)+v*tau.get(2,1)+w*tau.get(2,2))+heat[2]);
 }
-void physicalElement::viscFluxes(matrix flxq[], matrix* qq, matrix* qA, matrix* dx, matrix* dy, matrix* dz, matrix* qF)
+void physicalElement::viscFluxes(matrix flxq[], matrix* qq, matrix* qA, matrix* dx, matrix* dy, matrix* dz)
 /// computation of viscous fluxes in the three internal flx matrices.
 // (flx[0] for the x-fluxes, flx[1] for the y-fluxes and flx[2] for the z-fluxes)
 {
@@ -644,58 +620,22 @@ void physicalElement::viscFluxes(matrix flxq[], matrix* qq, matrix* qA, matrix* 
             }
         }
         break;
-        case 2: // dynamic (isotropic) Germano model
-        {
-            double u, v, w, T, mu, k, ggm1=gam/(gam-1.), mut, kt;
-            double CS, CI, CQ, CJ, s, rhoD2S, isoTau, dk;
-            symTensor Sr, tau; vector3D gradT, heat;
-            matrix vF[3]; vF[0].dim(1,nEq); vF[1].dim(1,nEq); vF[2].dim(1,nEq);
-            vector3D taK;
-            for (int i=0; i<Npq; i++)
-            {
-                u=(*qA).get(i,0); v=(*qA).get(i,1); w=(*qA).get(i,2); T=(*qA).get(i,3);
-                Sr=strainRate((*dx).row(i),(*dy).row(i),(*dz).row(i));
-                mu=Sutherland(T,S,Re); k=mu/Pr;
-                gradT.set((*dx).get(i,3),(*dy).get(i,3),(*dz).get(i,3));
-                s=Sr.Frobenius()/std::sqrt(2.);
-                rhoD2S=(*qq).get(i,0)*sq(d)*s;
-                coeffGermano(d,dF,(*qF).row(i),&CS,&CI,&CQ,&CJ);
-                CS=std::min(0.2,CS); // clipping on CS
-                mut=std::max(-mu,CS*rhoD2S); // clipping on mut
-                tau=(mu+mut)*Sr.noTrace(); // deviatory part of stress tensor
-                CI=std::clamp(CI,0.,0.1); // clipping on CI
-                isoTau=-CI*rhoD2S*s; // isotropic stress component
-                tau.add(0,0,isoTau); tau.add(1,1,isoTau); tau.add(2,2,isoTau);
-                CQ=std::min(0.2/0.85,CQ); // clipping on CQ
-                kt=std::max(-mu/Pr,CQ*rhoD2S); // clipping on kt
-                heat=-(k+kt)*ggm1*gradT;
-                dk=(*dx).get(0)*u+(*dx).get(1)*v+(*dx).get(2)*w;
-                CJ=std::max(0.,CJ);
-                taK[0]=CJ*rhoD2S*dk/2.;                        
-                dk=(*dy).get(0)*u+(*dy).get(1)*v+(*dy).get(2)*w;
-                taK[1]=CJ*rhoD2S*dk/2.;                         
-                dk=(*dz).get(0)*u+(*dz).get(1)*v+(*dz).get(2)*w;
-                taK[2]=CJ*rhoD2S*dk/2.;
-                viscousFlux(vF,u,v,w,tau,heat,taK);
-                flxq[0].set(i,0,vF[0]); flxq[1].set(i,0,vF[1]); flxq[2].set(i,0,vF[2]);        
-            }
-        }
-        break;
     }
 }
-void physicalElement::viscFluxes(matrix* dx, matrix* dy, matrix* dz, matrix* qF, int iS)
+void physicalElement::viscFluxes(matrix* dx, matrix* dy, matrix* dz, int iS)
 // computation of face normal viscous flux
 {
     switch(LES)
     {
         case(0): // ILES/DNS
         {
-            double u, v, w, T, mu, k, ggm1=gam/(gam-1.);
+            double rho, u, v, w, T, mu, k, ggm1=gam/(gam-1.);
             symTensor Sr, tau; vector3D gradT, heat;
             matrix vF[3]; vF[0].dim(1,nEq); vF[1].dim(1,nEq); vF[2].dim(1,nEq);
             for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
             {
-                u=qAuxS.get(i,0); v=qAuxS.get(i,1); w=qAuxS.get(i,2); T=qAuxS.get(i,3);
+                rho=qS.get(i,0); u=qS.get(i,1)/rho; v=qS.get(i,2)/rho; w=qS.get(i,3)/rho;
+                T=pressure(qS.row(i),gam,Ma)/rho;
                 Sr=strainRate((*dx).row(i),(*dy).row(i),(*dz).row(i));
                 mu=Sutherland(T,S,Re); k=mu/Pr;
                 gradT.set((*dx).get(i,3),(*dy).get(i,3),(*dz).get(i,3));
@@ -708,12 +648,13 @@ void physicalElement::viscFluxes(matrix* dx, matrix* dy, matrix* dz, matrix* qF,
         break;
         case 1: // Smagorinsky model
         {
-            double u, v, w, T, mu, k, ggm1=gam/(gam-1.), mut, kt;
+            double rho, u, v, w, T, mu, k, ggm1=gam/(gam-1.), mut, kt;
             symTensor Sr, tau; vector3D gradT, heat;
             matrix vF[3]; vF[0].dim(1,nEq); vF[1].dim(1,nEq); vF[2].dim(1,nEq);
             for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
             {
-                u=qAuxS.get(i,0); v=qAuxS.get(i,1); w=qAuxS.get(i,2); T=qAuxS.get(i,3);
+                rho=qS.get(i,0); u=qS.get(i,1)/rho; v=qS.get(i,2)/rho; w=qS.get(i,3)/rho;
+                T=pressure(qS.row(i),gam,Ma)/rho;
                 Sr=strainRate((*dx).row(i),(*dy).row(i),(*dz).row(i));
                 mu=Sutherland(T,S,Re); k=mu/Pr;
                 gradT.set((*dx).get(i,3),(*dy).get(i,3),(*dz).get(i,3));
@@ -722,43 +663,6 @@ void physicalElement::viscFluxes(matrix* dx, matrix* dy, matrix* dz, matrix* qF,
                 kt=mut/0.85;
                 heat=-(k+kt)*ggm1*gradT;
                 viscousFlux(vF,u,v,w,tau,heat);
-                flxS.set(i,0,vF[0]*n[iS][0]+vF[1]*n[iS][1]+vF[2]*n[iS][2]);
-            }
-        }
-        break;
-        case 2: // dynamic (isotropic) Germano model
-        {
-            double u, v, w, T, mu, k, ggm1=gam/(gam-1.), mut, kt;
-            double CS, CI, CQ, CJ, s, rhoD2S, isoTau, dk;
-            symTensor Sr, tau; vector3D gradT, heat;
-            matrix vF[3]; vF[0].dim(1,nEq); vF[1].dim(1,nEq); vF[2].dim(1,nEq);
-            vector3D taK;
-            for (int i=iS*Npq2; i<(iS+1)*Npq2; i++)
-            {
-                u=qAuxS.get(i,0); v=qAuxS.get(i,1); w=qAuxS.get(i,2); T=qAuxS.get(i,3);
-                Sr=strainRate((*dx).row(i),(*dy).row(i),(*dz).row(i));
-                mu=Sutherland(T,S,Re); k=mu/Pr;
-                gradT.set((*dx).get(i,3),(*dy).get(i,3),(*dz).get(i,3));
-                s=Sr.Frobenius()/std::sqrt(2.);
-                rhoD2S=qS.get(i,0)*sq(d)*s;
-                coeffGermano(d,dF,(*qF).row(i),&CS,&CI,&CQ,&CJ);
-                CS=std::min(0.2,CS); // clipping on CS
-                mut=std::max(-mu,CS*rhoD2S); // clipping on mut
-                tau=(mu+mut)*Sr.noTrace(); // deviatory part of stress tensor
-                CI=std::clamp(CI,0.,0.1); // clipping on CI
-                isoTau=-CI*rhoD2S*s; // isotropic stress component
-                tau.add(0,0,isoTau); tau.add(1,1,isoTau); tau.add(2,2,isoTau);
-                CQ=std::min(0.2/0.85,CQ); // clipping on CQ
-                kt=std::max(-mu/Pr,CQ*rhoD2S); // clipping on kt
-                heat=-(k+kt)*ggm1*gradT;
-                dk=(*dx).get(0)*u+(*dx).get(1)*v+(*dx).get(2)*w;
-                CJ=std::max(0.,CJ);
-                taK[0]=CJ*rhoD2S*dk/2.;                        
-                dk=(*dy).get(0)*u+(*dy).get(1)*v+(*dy).get(2)*w;
-                taK[1]=CJ*rhoD2S*dk/2.;                         
-                dk=(*dz).get(0)*u+(*dz).get(1)*v+(*dz).get(2)*w;
-                taK[2]=CJ*rhoD2S*dk/2.;
-                viscousFlux(vF,u,v,w,tau,heat,taK);
                 flxS.set(i,0,vF[0]*n[iS][0]+vF[1]*n[iS][1]+vF[2]*n[iS][2]);
             }
         }
@@ -779,7 +683,7 @@ void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix
     {
         case 0: // No condition
         {
-            double mu, k, u, v, w, T, ggm1=gam/(gam-1.);
+            double mu, k, rho, u, v, w, T, ggm1=gam/(gam-1.);
             symTensor Sr, tau; vector3D gradT, heat;
             matrix qInt(1,nEq); matrix flxB;
             matrix bF[3]; bF[0].dim(1,nEq); bF[1].dim(1,nEq); bF[2].dim(1,nEq);
@@ -788,7 +692,8 @@ void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix
                 qInt=qS.row(i);
                 convFlux(bF,qInt.get(0),qInt.get(1),qInt.get(2),qInt.get(3),qInt.get(4));
                 flxB=bF[0]*n[iS][0]+bF[1]*n[iS][1]+bF[2]*n[iS][2];
-                u=qAuxS.get(i,0); v=qAuxS.get(i,1); w=qAuxS.get(i,2); T=qAuxS.get(i,3);
+                rho=qS.get(i,0); u=qS.get(i,1)/rho; v=qS.get(i,2)/rho; w=qS.get(i,3)/rho;
+                T=pressure(qS.row(i),gam,Ma)/rho;
                 Sr=strainRate((*dx).row(i),(*dy).row(i),(*dz).row(i));
                 mu=Sutherland(T,S,Re); k=mu/Pr;
                 gradT.set((*dx).get(i,3),(*dy).get(i,3),(*dz).get(i,3));
@@ -823,7 +728,7 @@ void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix
         case 21: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014, p.18 and 19)
         {
         // The assigned values are: u=qB[6], v=qB[7], w=qB[8], T=qB[9] (T is not use here but in the gradient equation)
-            double mu, k, u, v, w, T, ggm1=gam/(gam-1.);
+            double mu, k, rho, u, v, w, T, ggm1=gam/(gam-1.);
             symTensor Sr, tau; vector3D gradT, heat;
             matrix qInt(1,nEq); matrix qExt(1,nEq); matrix flxInt; matrix flxExt;
             matrix bF[3]; bF[0].dim(1,nEq); bF[1].dim(1,nEq); bF[2].dim(1,nEq);
@@ -831,9 +736,9 @@ void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix
             {
                 qInt=qS.row(i);
                 qExt.set(0,0,qInt.get(0)); // external density equal to internal value
-                qExt.set(0,1,2.*(*BC).getQ(6)*qExt.get(0)-qInt.get(1)); // x momentum external value (extrapolating from inetrnal and boundary values)
-                qExt.set(0,2,2.*(*BC).getQ(7)*qExt.get(0)-qInt.get(2)); // y momentum external value (extrapolating from inetrnal and boundary values)
-                qExt.set(0,3,2.*(*BC).getQ(8)*qExt.get(0)-qInt.get(3)); // z momentum external value (extrapolating from inetrnal and boundary values)
+                qExt.set(0,1,2.*(*BC).getQ(6)*qExt.get(0)-qInt.get(1)); // x momentum external value (extrapolating from internal and boundary values)
+                qExt.set(0,2,2.*(*BC).getQ(7)*qExt.get(0)-qInt.get(2)); // y momentum external value (extrapolating from internal and boundary values)
+                qExt.set(0,3,2.*(*BC).getQ(8)*qExt.get(0)-qInt.get(3)); // z momentum external value (extrapolating from internal and boundary values)
                 qExt.set(0,4,qInt.get(4)); // external energy equal to internl value
                 switch (CIF)
                 {
@@ -857,7 +762,8 @@ void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix
                     }
                     break;
                 }
-                u=qAuxS.get(i,0); v=qAuxS.get(i,1); w=qAuxS.get(i,2); T=qAuxS.get(i,3);
+                rho=qS.get(i,0); u=qS.get(i,1)/rho; v=qS.get(i,2)/rho; w=qS.get(i,3)/rho;
+                T=pressure(qS.row(i),gam,Ma)/rho;
                 Sr=strainRate((*dx).row(i),(*dy).row(i),(*dz).row(i));
                 mu=Sutherland(T,S,Re); k=mu/Pr;
                 gradT.set((*dx).get(i,3),(*dy).get(i,3),(*dz).get(i,3));
@@ -881,7 +787,7 @@ void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix
         case 22: // weak-Riemann no-slip adiabatic condition (Mengaldo et al. 2014, p.20)
         {
         // The assigned values are: u=qB[6], v=qB[7], w=qB[8]
-            double mu, k, u, v, w, T, ggm1=gam/(gam-1.);
+            double mu, k, rho, u, v, w, T, ggm1=gam/(gam-1.);
             symTensor Sr, tau; vector3D gradT, heat;
             matrix qInt(1,nEq); matrix qExt(1,nEq); matrix flxInt; matrix flxExt;
             matrix bF[3]; bF[0].dim(1,nEq); bF[1].dim(1,nEq); bF[2].dim(1,nEq);
@@ -890,9 +796,9 @@ void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix
             {
                 qInt=qS.row(i);
                 qExt.set(0,0,qInt.get(0)); // external density equal to internal value
-                qExt.set(0,1,2.*(*BC).getQ(6)*qExt.get(0)-qInt.get(1)); // x momentum external value (extrapolating from inetrnal and boundary values)
-                qExt.set(0,2,2.*(*BC).getQ(7)*qExt.get(0)-qInt.get(2)); // y momentum external value (extrapolating from inetrnal and boundary values)
-                qExt.set(0,3,2.*(*BC).getQ(8)*qExt.get(0)-qInt.get(3)); // z momentum external value (extrapolating from inetrnal and boundary values)
+                qExt.set(0,1,2.*(*BC).getQ(6)*qExt.get(0)-qInt.get(1)); // x momentum external value (extrapolating from internal and boundary values)
+                qExt.set(0,2,2.*(*BC).getQ(7)*qExt.get(0)-qInt.get(2)); // y momentum external value (extrapolating from internal and boundary values)
+                qExt.set(0,3,2.*(*BC).getQ(8)*qExt.get(0)-qInt.get(3)); // z momentum external value (extrapolating from internal and boundary values)
                 qExt.set(0,4,qInt.get(4)); // external energy equal to internl value
                 switch (CIF)
                 {
@@ -916,7 +822,8 @@ void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix
                     }
                     break;
                 }
-                u=qAuxS.get(i,0); v=qAuxS.get(i,1); w=qAuxS.get(i,2); T=qAuxS.get(i,3);
+                rho=qS.get(i,0); u=qS.get(i,1)/rho; v=qS.get(i,2)/rho; w=qS.get(i,3)/rho;
+                T=pressure(qS.row(i),gam,Ma)/rho;
                 Sr=strainRate((*dx).row(i),(*dy).row(i),(*dz).row(i));
                 mu=Sutherland(T,S,Re); k=mu/Pr;
                 gradT.set((*dx).get(i,3),(*dy).get(i,3),(*dz).get(i,3));

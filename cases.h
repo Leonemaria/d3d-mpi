@@ -10,11 +10,10 @@
 #include "utilities.h"
 #include "physicalRelations.h"
 #include "global.h"
-#include "LES.h"
 //
 // case distribution functions
 void iniFunc(std::string caseName, int i, vector3D x, matrix* qP,  const global& g);
 void srcFunc(std::string caseName, matrix* B, matrix* q, double gam, double Ma, double Re);
-matrix varHist(std::string caseName, computationalElement* cE,double d, double dF, matrix *q, matrix* qA, matrix* q_x, matrix*q_y, matrix* q_z, matrix* qF,
+matrix varHist(std::string caseName, computationalElement* cE,double d, double dF, matrix *q, matrix* qA, matrix* q_x, matrix*q_y, matrix* q_z,
                double S, double Re, int LES);
 

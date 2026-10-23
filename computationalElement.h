@@ -25,8 +25,6 @@ class computationalElement
         matrix getPHI();
         matrix getPHI2();
         matrix getE();
-        matrix getF();
-        matrix getF2();
         matrix wQuad(int d);
         void step_I(matrix* A_x, matrix* A_y, matrix* A_z, matrix f, matrix fS[], vector3D r_x, vector3D r_y, vector3D r_z);
         void step_IIa(double dt, int m, matrix* KA, matrix* A, matrix* A_0, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z);
@@ -44,7 +42,7 @@ class computationalElement
         vector3D* rq=nullptr; // array of quadrature point coordinates [r,s,t]
         matrix w2D; // column matrix of triangle quadrature point weights
         matrix w3D; // column matrix of volume quadrature point weights
-        matrix PHI, PHI2, E, E2, F, F2;
+        matrix PHI, PHI2, E, E2;
         matrix D_r, D_s, D_t;
 };
 //

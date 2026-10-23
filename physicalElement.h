@@ -17,8 +17,7 @@
 #include "global.h"
 #include "vectors.h"
 #include "cases.h"
-#include "LES.h"
-
+//
 // this class defines the physical element (triangle)
 //
 class physicalElement
@@ -35,7 +34,6 @@ class physicalElement
         double getAM(int i, int eq);
         matrix getHist();
         intMatrix getJoin();
-        double getQAS(int i, int eq);
         matrix getQAS(int i);
         double getQP(int i, int eq);
         double getQS(int i, int eq);
@@ -66,8 +64,8 @@ class physicalElement
         double* toAM();
         void viscousFlux(matrix vF[], double u, double v, double w, symTensor tau, vector3D heat);
         void viscousFlux(matrix vF[], double u, double v, double w, symTensor tau, vector3D heat, vector3D taK);
-        void viscFluxes(matrix flxq[], matrix* qq, matrix* qA, matrix* dx, matrix* dy, matrix* dz, matrix* qF);
-        void viscFluxes(matrix* dx, matrix* dy, matrix* dz, matrix* qF, int iS);
+        void viscFluxes(matrix flxq[], matrix* qq, matrix* qA, matrix* dx, matrix* dy, matrix* dz);
+        void viscFluxes(matrix* dx, matrix* dy, matrix* dz, int iS);
         void boundaryFluxes(double time, matrix* dx, matrix* dy, matrix* dz, int iS, boundaryCondition* BC, matrix* forces, bool dmpH);
 
     private:
@@ -83,7 +81,7 @@ class physicalElement
         matrix H;
         intMatrix join;
         vector3D x_r, x_s, x_t, r_x, r_y, r_z;
-        matrix qS, qAuxS;
+        matrix qS;
         matrix A, KA, A_0;
         vector3D n[4];
         computationalElement* cE; // pointer to the computational element
