@@ -307,6 +307,7 @@ int main(int argc, char* argv[])
     delete[] e; e=nullptr; delete[] xN; xN=nullptr;
     delete[] qSnd; qSnd=nullptr; delete[] qRcv; qRcv=nullptr;
     delete[] qASnd; qASnd=nullptr; delete[] qARcv; qARcv=nullptr;
+    delete[] fSnd; fSnd=nullptr;
     if (myRank==0) {double t_end = omp_get_wtime(); std::cout << "Elapsed time: " << t_end - t_start << " s\n";}
     //
     MPI_Finalize();
