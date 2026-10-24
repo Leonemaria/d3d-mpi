@@ -119,7 +119,7 @@ intMatrix physicalElement::getJoin()
 }
 matrix physicalElement::getQAS(int i)
 {
-    matrix qAS(1,4);
+    matrix qAS(1,nAux);
     double rho=qS.get(i,0), rhoU=qS.get(i,1), rhoV=qS.get(i,2), rhoW=qS.get(i,3);
     qAS.set(0,rhoU/rho); qAS.set(1,rhoV/rho); qAS.set(2,rhoW/rho);
     qAS.set(3,pressure(rho,rhoU,rhoV,rhoW,qS.get(i,4),gam,Ma)/rho);
@@ -377,12 +377,16 @@ void physicalElement::step_I(double dt, int m, double time, std::string nameCase
             {
                 switch (kind)
                 {
+                    case 11: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014, p.18 and 19)
+                        qMed=getQAS(i);
+                    break;
                     case 21: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014, p.18 and 19)
                         for (int eq=0; eq<nAux; eq++) {qMed.set(eq,BC[join.get(iS,3)].getQ(eq+nEq+1));}
                     break;
                     case 22: // weak-Riemann no-slip adiabatic condition (Mengaldo et al. 2014, p.20)
                              // for this case the temperature is not set to a specific value (so it is kept as the internal value)
                         for (int eq=0; eq<nAux-1; eq++) {qMed.set(eq,BC[join.get(iS,3)].getQ(eq+nEq+1));}
+                        qMed.set(3,pressure(qS.row(i),gam,Ma)/qS.get(i,0));
                     break;
                 }
                 numFlx[0].set(i,0,JS[iS]*qMed*n[iS][0]);
