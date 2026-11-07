@@ -94,14 +94,17 @@ computationalElement::computationalElement(const global& glb)
             if ((std::abs(lambda1-lambda2J)+std::abs(lambda3-lambda3J))<toll) {extP.set(i,2,j);}
         }
     }
-    PHI2.dim(4*Npq2,Nm);
-    E2.dim(Nm,4*Npq2);
-    for (int i=0; i<Npq2*4; i++)
+    for (int iS=0; iS<4; iS++)
     {
-        for (int j=0; j<Nm; j++)
+        PHIS[iS].dim(Npq2,Nm);
+        ES[iS].dim(Nm,Npq2);
+        for (int i=0; i<Npq2; i++)
         {
-           PHI2.set(i,j,psi3D(iInd[j],jInd[j],kInd[j],rq2[i]));
-           E2.set(j,i,w2D.get(i)*psi3D(iInd[j],jInd[j],kInd[j],rq2[i]));
+            for (int j=0; j<Nm; j++)
+            {
+               PHIS[iS].set(i,j,psi3D(iInd[j],jInd[j],kInd[j],rq2[iS*Npq2+i]));
+               ES[iS].set(j,i,w2D.get(i)*psi3D(iInd[j],jInd[j],kInd[j],rq2[iS*Npq2+i]));
+            }
         }
     }
 //    
@@ -124,9 +127,9 @@ matrix computationalElement::getPHI()
 {
     return PHI;
 }
-matrix computationalElement::getPHI2()
+matrix computationalElement::getPHIS(int iS)
 {
-    return PHI2;
+    return PHIS[iS];
 }
 matrix computationalElement::getE()
 {
@@ -142,15 +145,16 @@ matrix computationalElement::subStep_a(double d, matrix f[], matrix* B, vector3D
     if(src>0) { return d*((r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f[0]+(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f[1]+(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f[2]+E*(*B));}
     else {return d*((r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f[0]+(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f[1]+(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f[2]);}
 }
-matrix computationalElement::subStep_b(double d, matrix* fS)
+matrix computationalElement::subStep_b(double d, matrix fS[])
 {  
-    return -d*E2*(*fS);
+    return -d*(ES[0]*fS[0]+ES[1]*fS[1]+ES[2]*fS[2]+ES[3]*fS[3]);
 }
-void computationalElement::step_I(matrix* A_x, matrix* A_y, matrix* A_z, matrix f, matrix fS[], vector3D r_x, vector3D r_y, vector3D r_z)
+void computationalElement::gradSolution(matrix* A_x, matrix* A_y, matrix* A_z, matrix f, matrix fS[], vector3D r_x, vector3D r_y, vector3D r_z,vector3D n[])
 {
-    (*A_x)=-(r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f+E2*fS[0];
-    (*A_y)=-(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f+E2*fS[1];
-    (*A_z)=-(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f+E2*fS[2];
+    matrix EfS[4]; for (int iS=0; iS<4; iS++) {EfS[iS]=ES[iS]*fS[iS];}
+    (*A_x)=-(r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f+EfS[0]*n[0][0]+EfS[1]*n[1][0]+EfS[2]*n[2][0]+EfS[3]*n[3][0];
+    (*A_y)=-(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f+EfS[0]*n[0][1]+EfS[1]*n[1][1]+EfS[2]*n[2][1]+EfS[3]*n[3][1];
+    (*A_z)=-(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f+EfS[0]*n[0][2]+EfS[1]*n[1][2]+EfS[2]*n[2][2]+EfS[3]*n[3][2];
 }
 void computationalElement::step_IIa(double d, int m, matrix* KA, matrix* A, matrix* A_0, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z)
 {
@@ -174,7 +178,7 @@ void computationalElement::step_IIa(double d, int m, matrix* KA, matrix* A, matr
          break;
     }
 }
-void computationalElement::step_IIb(double d, int m, matrix* KA, matrix* A, matrix* A_0, matrix* fS)
+void computationalElement::step_IIb(double d, int m, matrix* KA, matrix* A, matrix* A_0, matrix fS[])
 {
 // five step fourth order Runge Kutta scheme (addition of surface integral)
     switch (m)

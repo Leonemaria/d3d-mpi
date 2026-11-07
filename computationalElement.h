@@ -23,14 +23,14 @@ class computationalElement
 // public methods declarations
         vector3D getRq(int k); // return the computational coordinates vector [r,s] of the k-th quadrature point
         matrix getPHI();
-        matrix getPHI2();
+        matrix getPHIS(int iS);
         matrix getE();
         matrix wQuad(int d);
-        void step_I(matrix* A_x, matrix* A_y, matrix* A_z, matrix f, matrix fS[], vector3D r_x, vector3D r_y, vector3D r_z);
+        void gradSolution(matrix* A_x, matrix* A_y, matrix* A_z, matrix f, matrix fS[], vector3D r_x, vector3D r_y, vector3D r_z, vector3D n[]);
         void step_IIa(double dt, int m, matrix* KA, matrix* A, matrix* A_0, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z);
-        void step_IIb(double dt, int m, matrix* KA, matrix* A, matrix* A_0, matrix* fS);
+        void step_IIb(double dt, int m, matrix* KA, matrix* A, matrix* A_0, matrix fS[]);
         matrix subStep_a(double dt, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z);
-        matrix subStep_b(double dt, matrix* fS);
+        matrix subStep_b(double dt, matrix fS[]);
         int extIndex(int i, int j);
         int time(int i, int m, double d);
     private:
@@ -42,7 +42,8 @@ class computationalElement
         vector3D* rq=nullptr; // array of quadrature point coordinates [r,s,t]
         matrix w2D; // column matrix of triangle quadrature point weights
         matrix w3D; // column matrix of volume quadrature point weights
-        matrix PHI, PHI2, E, E2;
+        matrix PHI, E;
+        matrix PHIS[4], ES[4];
         matrix D_r, D_s, D_t;
 };
 //

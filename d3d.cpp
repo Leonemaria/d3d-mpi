@@ -217,6 +217,7 @@ int main(int argc, char* argv[])
         {
            if ((ii==4)&&(i % glb.ctr[3]==0)){dmpR=true;} else {dmpR=false;}
            if ((ii==0)&&(i % glb.ctr[4]==0)){dmpH=true;} else {dmpH=false;}
+           time=cc.time(i,ii,glb.dt);
 // compute (for all elements) conservative and auxiliary (primitive) variables on side quadrature points
             #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
@@ -236,7 +237,7 @@ int main(int argc, char* argv[])
             #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
             {
-                e[iC].step_I(glb.dt,ii,cc.time(i,ii,glb.dt),caseName,e,BC,dmpH,myRank,qARcv,fSnd,&forces); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
+                e[iC].step_I(glb.dt,ii,time,caseName,e,BC,dmpH,myRank,qARcv,fSnd,&forces); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
                 // then updates the conservative variable modal amplitude making a time substep (with volume integrals only)
             }
 // computes numerical fluxes and advances the solution

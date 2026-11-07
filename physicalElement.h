@@ -31,15 +31,12 @@ class physicalElement
         void convFlux(matrix cF[], double rho, double rhoU, double rhoV, double rhoW, double E);
         void convFluxes(matrix flxq[], matrix* qq);
         void convFluxes(int iS);
-        double getAM(int i, int eq);
         matrix getHist();
         intMatrix getJoin();
-        matrix getQAS(int i);
-        double getQP(int i, int eq);
-        double getQS(int i, int eq);
-        matrix getQS(int i);
+        matrix getQAS(int iS,int i);
+        matrix getQS(int iS,int i);
         double getResidual();
-        matrix getFlxS(int i);
+        matrix getFlxS(int iS,int i);
         vector3D getX(vector3D rP);
         matrix HLL(int iS, matrix qInt, matrix qExt);
         matrix HLLC(int iS, matrix qInt, matrix qExt);
@@ -77,11 +74,11 @@ class physicalElement
         double J, JS[4], d, dF, h, res;
         matrix rot[4], invRot[4];
         vector3D* x0;
-        matrix flxS;
+        matrix flxS[4];
         matrix H;
         intMatrix join;
         vector3D x_r, x_s, x_t, r_x, r_y, r_z;
-        matrix qS;
+        matrix qS[4];
         matrix A, KA, A_0;
         vector3D n[4];
         computationalElement* cE; // pointer to the computational element
