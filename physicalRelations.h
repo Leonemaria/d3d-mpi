@@ -14,6 +14,7 @@ double energy(double rho, double rhoU, double rhoV, double rhoW, double p, doubl
 double pressure(double rho, double rhoU, double rhoV, double rhoW, double E, double gam, double Ma);
 double pressure(matrix* q, double gam, double Ma);
 double pressure(matrix q, double gam, double Ma);
+matrix qAuxiliary(matrix q, double gam, double Ma);
 double soundSpeed(double rho, double p, double Ma);
 double soundSpeed(double rho, double rhoU, double rhoV, double rhoW, double E, double gam, double Ma);
 double soundSpeed(matrix* q, double gam, double Ma);

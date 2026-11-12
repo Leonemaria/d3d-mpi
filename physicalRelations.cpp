@@ -16,6 +16,14 @@ double pressure(matrix q, double gam, double Ma)
 {
     return (gam-1.)*(q.get(4)-0.5*gam*sq(Ma)*(sq(q.get(1))+sq(q.get(2))+sq(q.get(3)))/q.get(0));
 }
+matrix qAuxiliary(matrix q, double gam, double Ma)
+{
+    matrix qAS(1,nAux);
+    double rho=q.get(0), rhoU=q.get(1), rhoV=q.get(2), rhoW=q.get(3);
+    qAS.set(0,rhoU/rho); qAS.set(1,rhoV/rho); qAS.set(2,rhoW/rho);
+    qAS.set(3,pressure(rho,rhoU,rhoV,rhoW,q.get(4),gam,Ma)/rho);
+    return qAS;   
+}
 double soundSpeed(double rho, double p, double Ma)
 {
     return std::sqrt(p/rho)/Ma;

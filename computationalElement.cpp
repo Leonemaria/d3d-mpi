@@ -140,14 +140,16 @@ matrix computationalElement::wQuad(int d)
     if (d==2) {return w2D.part(0,Npq2);}
     if (d==3) {return w3D;}
 }
-matrix computationalElement::subStep_a(double d, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z)
+matrix computationalElement::RHS_V(matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z)
 {  
-    if(src>0) { return d*((r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f[0]+(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f[1]+(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f[2]+E*(*B));}
-    else {return d*((r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f[0]+(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f[1]+(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f[2]);}
+// Right Hand Side computation (with volume integral contributions only)
+    if(src>0) { return (r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f[0]+(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f[1]+(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f[2]+E*(*B);}
+    else {return (r_x[0]*D_r+r_x[1]*D_s+r_x[2]*D_t)*f[0]+(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f[1]+(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f[2];}
 }
-matrix computationalElement::subStep_b(double d, matrix fS[])
-{  
-    return -d*(ES[0]*fS[0]+ES[1]*fS[1]+ES[2]*fS[2]+ES[3]*fS[3]);
+matrix computationalElement::RHS_S(matrix fS[])
+{
+// Right Hand Side computation (surface contributions)
+    return ES[0]*fS[0]+ES[1]*fS[1]+ES[2]*fS[2]+ES[3]*fS[3];
 }
 void computationalElement::gradSolution(matrix* A_x, matrix* A_y, matrix* A_z, matrix f, matrix fS[], vector3D r_x, vector3D r_y, vector3D r_z,vector3D n[])
 {
@@ -156,47 +158,49 @@ void computationalElement::gradSolution(matrix* A_x, matrix* A_y, matrix* A_z, m
     (*A_y)=-(r_y[0]*D_r+r_y[1]*D_s+r_y[2]*D_t)*f+EfS[0]*n[0][1]+EfS[1]*n[1][1]+EfS[2]*n[2][1]+EfS[3]*n[3][1];
     (*A_z)=-(r_z[0]*D_r+r_z[1]*D_s+r_z[2]*D_t)*f+EfS[0]*n[0][2]+EfS[1]*n[1][2]+EfS[2]*n[2][2]+EfS[3]*n[3][2];
 }
-void computationalElement::step_IIa(double d, int m, matrix* KA, matrix* A, matrix* A_0, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z)
+void computationalElement::RK_V(double d, int m, matrix* KA, matrix* A, matrix* A_0, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z)
 {
 // five step fourth order Runge Kutta scheme SSPRK(5,4) (Gottlieb&Ketcheson&Shu p.23)
+// RK substep (with volume intergral contributions only)
     switch (m)
     {
         case 0:
-            (*A_0)=(*A); (*A)+=subStep_a(0.391752226571890*d,f,B,r_x,r_y,r_z);
+            (*A_0)=(*A); (*A)+=0.391752226571890*d*RHS_V(f,B,r_x,r_y,r_z);
         break;
         case 1:
-            (*A)=0.444370493651235*(*A_0)+0.555629506348765*(*A)+subStep_a(0.368410593050371*d,f,B,r_x,r_y,r_z);
+            (*A)=0.444370493651235*(*A_0)+0.555629506348765*(*A)+0.368410593050371*d*RHS_V(f,B,r_x,r_y,r_z);
         break;
         case 2:
-            (*KA)=0.517231671970585*(*A); (*A)=0.620101851488403*(*A_0)+0.379898148511597*(*A)+subStep_a(0.251891774271694*d,f,B,r_x,r_y,r_z);
+            (*KA)=0.517231671970585*(*A); (*A)=0.620101851488403*(*A_0)+0.379898148511597*(*A)+0.251891774271694*d*RHS_V(f,B,r_x,r_y,r_z);
         break;
         case 3:
-            (*A)=0.821920045606868*(*A)+subStep_a(0.544974750228521*d,f,B,r_x,r_y,r_z);
+            (*A)=0.821920045606868*(*A)+0.544974750228521*d*RHS_V(f,B,r_x,r_y,r_z);
         break;
         case 4:
-            (*A)=(*KA)+0.386708617503269*(*A)+subStep_a(0.226007483236906*d,f,B,r_x,r_y,r_z);
+            (*A)=(*KA)+0.386708617503269*(*A)+0.226007483236906*d*RHS_V(f,B,r_x,r_y,r_z);
          break;
     }
 }
-void computationalElement::step_IIb(double d, int m, matrix* KA, matrix* A, matrix* A_0, matrix fS[])
+void computationalElement::RK_S(double d, int m, matrix* KA, matrix* A, matrix* A_0, matrix fS[])
 {
 // five step fourth order Runge Kutta scheme (addition of surface integral)
+// RK substep (surface contributions)
     switch (m)
     {
         case 0:
-            (*A)+=subStep_b(0.391752226571890*d,fS);
+            (*A)-=0.391752226571890*d*RHS_S(fS);
         break;
         case 1:
-            (*A)+=subStep_b(0.368410593050371*d,fS);
+            (*A)-=0.368410593050371*d*RHS_S(fS);
         break;
         case 2:
-            (*A)+=subStep_b(0.251891774271694*d,fS);
+            (*A)-=0.251891774271694*d*RHS_S(fS);
         break;
         case 3:
-            (*A)+=subStep_b(0.544974750228521*d,fS); (*KA)+=0.116872329662213*(*A); (*A)+=0.178079954393132*(*A_0);
+            (*A)-=0.544974750228521*d*RHS_S(fS); (*KA)+=0.116872329662213*(*A); (*A)+=0.178079954393132*(*A_0);
         break;
         case 4:
-            (*A)+=subStep_b(0.226007483236906*d,fS);
+            (*A)-=0.226007483236906*d*RHS_S(fS);
          break;
     }
 }

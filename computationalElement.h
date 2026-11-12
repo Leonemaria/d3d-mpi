@@ -27,10 +27,10 @@ class computationalElement
         matrix getE();
         matrix wQuad(int d);
         void gradSolution(matrix* A_x, matrix* A_y, matrix* A_z, matrix f, matrix fS[], vector3D r_x, vector3D r_y, vector3D r_z, vector3D n[]);
-        void step_IIa(double dt, int m, matrix* KA, matrix* A, matrix* A_0, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z);
-        void step_IIb(double dt, int m, matrix* KA, matrix* A, matrix* A_0, matrix fS[]);
-        matrix subStep_a(double dt, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z);
-        matrix subStep_b(double dt, matrix fS[]);
+        void RK_V(double dt, int m, matrix* KA, matrix* A, matrix* A_0, matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z);
+        void RK_S(double dt, int m, matrix* KA, matrix* A, matrix* A_0, matrix fS[]);
+        matrix RHS_V(matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z);
+        matrix RHS_S(matrix fS[]);
         int extIndex(int i, int j);
         int time(int i, int m, double d);
     private:

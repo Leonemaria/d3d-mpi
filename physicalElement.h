@@ -54,9 +54,9 @@ class physicalElement
         void setBC(int iS);
         void setIniCond(std::string caseName, const global& g);
         void setJoin(int i, int j, int k);
-        void step_0(boundaryCondition BC[], int myRank, matrix qSnd[], matrix qASnd[]);
+        void step_0(boundaryCondition BC[], int myRank, matrix qSnd[]);
         void step_I(double dt, int m, double time, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool dmpH, int myRank,
-                    matrix qARcv[], matrix fSnd[], matrix* forces);
+                    matrix qRcv[], matrix fSnd[], matrix* forces);
         void step_II(double dt, int m, physicalElement e[], bool dmpR, int myRank, matrix qRcv[], matrix fRcv[]);
         double* toAM();
         void viscousFlux(matrix vF[], double u, double v, double w, symTensor tau, vector3D heat);

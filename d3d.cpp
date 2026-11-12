@@ -110,7 +110,6 @@ int main(int argc, char* argv[])
     std::vector<int>jnPr; // contains the ranks of connected processes
     std::vector<std::vector<int>> jnFaces; // contains the nJnPr vectors containing the indices of the joined cells and faces
     matrix* qSnd=nullptr; matrix* qRcv=nullptr;
-    matrix* qASnd=nullptr; matrix* qARcv=nullptr;
     matrix* fSnd=nullptr; matrix* fRcv=nullptr;
     bool newJ; intMatrix jn;
     int Npq2;
@@ -150,15 +149,12 @@ int main(int argc, char* argv[])
     if (nJnPr>0)
     {
         qSnd=new matrix[nJnPr]; qRcv=new matrix[nJnPr];
-        qASnd=new matrix[nJnPr]; qARcv=new matrix[nJnPr];
         fSnd=new matrix[nJnPr]; fRcv=new matrix[nJnPr];
     }  
     for (int i=0; i<nJnPr; i++) // allocate the buffers for data exchange between the processes
     {
         qSnd[i].dim((jnFaces[i].size()/2)*Npq2,5);
         qRcv[i].dim((jnFaces[i].size()/2)*Npq2,5);
-        qASnd[i].dim((jnFaces[i].size()/2)*Npq2,4);
-        qARcv[i].dim((jnFaces[i].size()/2)*Npq2,4);
         fSnd[i].dim((jnFaces[i].size()/2)*Npq2,5);
         fRcv[i].dim((jnFaces[i].size()/2)*Npq2,5);
     }
@@ -222,22 +218,20 @@ int main(int argc, char* argv[])
             #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
             {
-                e[iC].step_0(BC,myRank,qSnd,qASnd); // computes conservative and auxiliary (primitive) variables on side quadrature points
+                e[iC].step_0(BC,myRank,qSnd); // computes conservative and auxiliary (primitive) variables on side quadrature points
             }
             for (int i=0; i<nJnPr; i++) // exchange the data between the processes
             {
                 MPI_Isend(qSnd[i].data(),qSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*4]); // the linking indices are sent
-                MPI_Isend(qASnd[i].data(),qASnd[i].size(),MPI_DOUBLE,jnPr[i],2,MPI_COMM_WORLD,&rqs[i*4+1]); // the linking indices are sent
                 MPI_Irecv(qRcv[i].data(),qRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*4+2]); // the linking indices are received
-                MPI_Irecv(qARcv[i].data(),qARcv[i].size(),MPI_DOUBLE,jnPr[i],2,MPI_COMM_WORLD,&rqs[i*4+3]); // the linking indices are received
             }
-            MPI_Waitall(4*nJnPr,rqs,MPI_STATUSES_IGNORE);
+            MPI_Waitall(2*nJnPr,rqs,MPI_STATUSES_IGNORE);
             MPI_Barrier(MPI_COMM_WORLD);   
 //
             #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
             {
-                e[iC].step_I(glb.dt,ii,time,caseName,e,BC,dmpH,myRank,qARcv,fSnd,&forces); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
+                e[iC].step_I(glb.dt,ii,time,caseName,e,BC,dmpH,myRank,qRcv,fSnd,&forces); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
                 // then updates the conservative variable modal amplitude making a time substep (with volume integrals only)
             }
 // computes numerical fluxes and advances the solution
@@ -307,7 +301,6 @@ int main(int argc, char* argv[])
     }
     delete[] e; e=nullptr; delete[] xN; xN=nullptr;
     delete[] qSnd; qSnd=nullptr; delete[] qRcv; qRcv=nullptr;
-    delete[] qASnd; qASnd=nullptr; delete[] qARcv; qARcv=nullptr;
     delete[] fSnd; fSnd=nullptr;
     if (myRank==0) {double t_end = omp_get_wtime(); std::cout << "Elapsed time: " << t_end - t_start << " s\n";}
     //

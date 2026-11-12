@@ -118,11 +118,7 @@ intMatrix physicalElement::getJoin()
 }
 matrix physicalElement::getQAS(int iS, int i)
 {
-    matrix qAS(1,nAux);
-    double rho=qS[iS].get(i,0), rhoU=qS[iS].get(i,1), rhoV=qS[iS].get(i,2), rhoW=qS[iS].get(i,3);
-    qAS.set(0,rhoU/rho); qAS.set(1,rhoV/rho); qAS.set(2,rhoW/rho);
-    qAS.set(3,pressure(rho,rhoU,rhoV,rhoW,qS[iS].get(i,4),gam,Ma)/rho);
-    return qAS;   
+    return qAuxiliary(qS[iS].row(i),gam,Ma);   
 }
 matrix physicalElement::getQS(int iS,int i)
 {
@@ -332,9 +328,8 @@ void physicalElement::setJoin(int i, int j, int k)
 {
     join.set(i,j,k);
 }
-void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[], matrix qASnd[])
-//void physicalElement::step_0(boundaryCondition BC[])
-// computes conservative and auxiliary (primitive) variables on side quadrature points
+void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[])
+// computes conservative variables on side quadrature points
 {
     double rho;
     for (int iS=0; iS<4; iS++)
@@ -346,14 +341,13 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[], 
             int jFc=join.get(iS,2);
             for (int i=0; i<Npq2; i++)
             {
-                qSnd[jPr].set(jFc*Npq2+i,0,qS[iS].row(i));
-                qASnd[jPr].set(jFc*Npq2+i,0,getQAS(iS,i));
+                qSnd[jPr].set(jFc*Npq2+i,0,qS[iS].row(i)); // prepares values for sending
             }
         }        
     }
 }
 void physicalElement::step_I(double dt, int m, double time, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool dmpH, int myRank,
-     matrix qARcv[], matrix fSnd[], matrix* forces)
+     matrix qRcv[], matrix fSnd[], matrix* forces)
 // computes the auxiliary variable gradients and physical fluxes on internal and side quadrature points
 // the internal fluxes (convective-viscous) are stored in the matrix array fluxq[3]: the i-th matrix contains the i-th component of fluxes
 // the side fluxes are stored
@@ -409,7 +403,7 @@ void physicalElement::step_I(double dt, int m, double time, std::string nameCase
                 for (int i=0; i<Npq2; i++)
                 {
                     iExt=(*cE).extIndex(i,join.get(iS,3)); // i index of the point on the connected element side
-                    qMed=0.5*(getQAS(iS,i)+qARcv[jPr].row(jFc*Npq2+iExt));
+                    qMed=0.5*(getQAS(iS,i)+qAuxiliary(qRcv[jPr].row(jFc*Npq2+iExt),gam,Ma));
                     numFlx[iS].set(i,0,JS[iS]*qMed);
                 }
             }
@@ -426,7 +420,7 @@ void physicalElement::step_I(double dt, int m, double time, std::string nameCase
     }
     // computes the auxiliary variable gradients
     matrix A_x, A_y, A_z;
-    (*cE).gradSolution(&A_x,&A_y,&A_z,qqAux,numFlx,r_x,r_y,r_z,n); //  computation of mode amplitudes of auxiliary variable gradients
+    (*cE).gradSolution(&A_x,&A_y,&A_z,qqAux,numFlx,r_x,r_y,r_z,n); //  solves for mode amplitudes of auxiliary variable gradients
     matrix qq_x=(*cE).getPHI()*A_x; matrix qq_y=(*cE).getPHI()*A_y; matrix qq_z=(*cE).getPHI()*A_z; // compute the aux. variable gradients on volume quadrature points
     matrix q_xS[4], q_yS[4], q_zS[4];
     for (int iS=0; iS<4; iS++)
@@ -468,7 +462,7 @@ void physicalElement::step_I(double dt, int m, double time, std::string nameCase
     //
     convFluxes(flxq,&qq); // add convective flux on volume quadrature points
     matrix B; if (src>0) {B.dim(Npq,nEq); srcFunc(nameCase,&B,&qq,gam,Ma,Re);} // possibly computes the sources terms
-    (*cE).step_IIa(dt,m,&KA,&A,&A_0,flxq,&B,r_x,r_y,r_z); //computation of mode amplitude of condervative variables (just volume integrals) 
+    (*cE).RK_V(dt,m,&KA,&A,&A_0,flxq,&B,r_x,r_y,r_z); //computation of mode amplitude of condervative variables (just volume integrals) 
 }
 //
 void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, int myRank, matrix qRcv[], matrix fRcv[])
@@ -547,7 +541,7 @@ void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, 
             }
         }
     }
-    (*cE).step_IIb(dt,m,&KA,&A,&A_0,numFlx); //computation of mode amplitude of condervative variables (addition of surface integral)
+    (*cE).RK_S(dt,m,&KA,&A,&A_0,numFlx); //computation of mode amplitude of condervative variables (addition of surface integral)
     if (dmpR) {res=integralV((*cE).getPHI()*(A.col(0)-A_0.col(0)));} // computes the residual
 }
 double* physicalElement::toAM()
