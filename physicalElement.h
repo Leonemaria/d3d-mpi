@@ -26,7 +26,7 @@ class physicalElement
 // constructors/destructor declarations
         physicalElement();
 // public methods declarations
-        void init(int my, computationalElement *c, vector3D x[], int iV[], intMatrix l, const global& g, boundaryCondition BC[], int myRank);
+        void init(int my, computationalElement *c, vector3D x[], int iV[], intMatrix l, global* g, boundaryCondition BC[], int myRank);
         double CFL(double dt);
         void convFlux(matrix cF[], double rho, double rhoU, double rhoV, double rhoW, double E);
         void convFluxes(matrix flxq[], matrix* qq);
@@ -52,7 +52,7 @@ class physicalElement
         void print();
         void setAM(int i, int eq, double a);
         void setBC(int iS);
-        void setIniCond(std::string caseName, const global& g);
+        void setIniCond(std::string caseName);
         void setJoin(int i, int j, int k);
         void step_0(boundaryCondition BC[], int myRank, matrix qSnd[]);
         void step_I(double dt, int m, double time, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool dmpH, int myRank,
@@ -82,8 +82,7 @@ class physicalElement
         matrix A, KA, A_0;
         vector3D n[4];
         computationalElement* cE; // pointer to the computational element
-        double Ma, Re, Fr, Pr, gam, gaM2, S;
-        int LES, CIF, src;
+        global* glb; // pointer to the structure of the global variables
 };
 //
 #endif

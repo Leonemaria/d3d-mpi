@@ -1,24 +1,24 @@
 //cases.cpp
 #include "cases.h"
-void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  const global& g)
+void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  global* g)
 {
-    double Ma=g.phy[0], gam=g.phy[4];
+    double Ma=(*g).phy[0], gam=(*g).phy[4];
     double rho=1., u=0., v=0., w=0., E=1., p=1.;
     if (caseName=="test")
     {
         u=1.5-1.5*sq(x[1]-1.);
         u=0.5-0.5*sq(x[0]-.25);
-        E=energy(rho,rho*u,rho*v,rho*w,p,gam,Ma);
+        E=energy(rho,rho*u,rho*v,rho*w,p,g);
     }
     if (caseName=="poiseuille") // Poiseuille plane channel flow with channel height h=1
     {
         u=2./3.;
-        E=energy(rho,rho*u,rho*v,rho*w,p,gam,Ma);
+        E=energy(rho,rho*u,rho*v,rho*w,p,g);
     }
     if (caseName=="adiabaticPoiseuille") // Poiseuille plane channel flow with channel height h=1
     {
         u=2./3.;
-        E=energy(rho,rho*u,rho*v,rho*w,p,gam,Ma);
+        E=energy(rho,rho*u,rho*v,rho*w,p,g);
     }
     if (caseName=="cylinder") // flow around a cylinder of diameter D=1
     {
@@ -29,14 +29,14 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  const global& 
         u_t=-(1.+1./sq(r))*sinTh+0.1/sq(r);
         u=u_r*cosTh-u_t*sinTh;
         v=u_r*sinTh+u_t*cosTh;
-        E=energy(rho,rho*u,rho*v,rho*w,p,gam,Ma);
+        E=energy(rho,rho*u,rho*v,rho*w,p,g);
     }
     if (caseName=="naca0012") // flow around a cylinder of diameter D=1
     {
-        double alph=g.phy[6]*radPerDeg;
+        double alph=(*g).phy[6]*radPerDeg;
         double r=std::sqrt(sq(x[0])+sq(x[1]));
         if (r>1.) {u=cos(alph); v=sin(alph);}
-        E=energy(rho,rho*u,rho*v,rho*w,p,gam,Ma);
+        E=energy(rho,rho*u,rho*v,rho*w,p,g);
     }
     if (caseName=="taylorgreen")
     {
@@ -44,7 +44,7 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  const global& 
         rho=p;
         v=sin(x[1])*cos(x[0])*cos(x[2]);
         u=-cos(x[1])*sin(x[0])*cos(x[2]);
-        E=energy(rho,rho*u,rho*v,rho*w,p,gam,Ma);
+        E=energy(rho,rho*u,rho*v,rho*w,p,g);
     }
     (*q).set(i,0,rho);
     (*q).set(i,1,rho*u);
@@ -52,19 +52,20 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  const global& 
     (*q).set(i,3,rho*w);
     (*q).set(i,4,E);
 }
-void srcFunc(std::string caseName, matrix* B, matrix* q, double gam, double Ma, double Re)
+void srcFunc(std::string caseName, matrix* B, matrix* q, global* g)
 {
     int Np=(*q).nR();
+    double gaM2=(*g).phy[7], Re=(*g).phy[1];
     if (caseName=="adiabaticPoiseuille") // Adiabatic Poiseuille plane channel flow with channel height h=1
     {
-        double p_x_gM2=8./Re;
+        double p_x_gM2=8./Re, ggm1=(*g).phy[8];
         for (int i=0; i<Np; i++)
         {
             (*B).set(i,0,0.);
             (*B).set(i,1,p_x_gM2);
             (*B).set(i,2,0.);
             (*B).set(i,3,0.);
-            (*B).set(i,4,p_x_gM2*gam*sq(Ma)*((*q).get(i,1)/(*q).get(i,0)-gam/(gam-1)/(Re*0.71)));
+            (*B).set(i,4,p_x_gM2*gaM2*((*q).get(i,1)/(*q).get(i,0)-ggm1/(Re*0.71)));
         }
     }
     if (caseName=="poiseuille") // Isothermal Poiseuille plane channel flow with channel height h=1
@@ -76,12 +77,12 @@ void srcFunc(std::string caseName, matrix* B, matrix* q, double gam, double Ma, 
             (*B).set(i,1,p_x_gM2);
             (*B).set(i,2,0.);
             (*B).set(i,3,0.);
-            (*B).set(i,4,(*q).get(i,1)*p_x_gM2*gam*sq(Ma)/(*q).get(i,0));
+            (*B).set(i,4,(*q).get(i,1)*p_x_gM2*gaM2/(*q).get(i,0));
         }
     }
 }
 matrix varHist(std::string caseName, computationalElement* cE, double d, double dF, matrix *q, matrix* qA, matrix* q_x, matrix* q_y, matrix* q_z,
-               double S, double Re, int LES)
+               global* g)
 {
     double rho, u, v, w, T, mu, mut=0., s;
     symTensor Sr, tau;
@@ -94,8 +95,8 @@ matrix varHist(std::string caseName, computationalElement* cE, double d, double 
         {
             rho=(*q).get(i,0); u=(*qA).get(i,0); v=(*qA).get(i,1); w=(*qA).get(i,2), T=(*qA).get(i,3);
             Sr=strainRate((*q_x).row(i),(*q_y).row(i),(*q_z).row(i));
-            mu=Sutherland(T,S,Re);
-            switch(LES)
+            mu=Sutherland(T,g);
+            switch((*g).sch[1]) // switch over the LES model
             {
                 case 0:
                     tau=mu*Sr.noTrace();

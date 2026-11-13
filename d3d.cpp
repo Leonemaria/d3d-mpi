@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
     if (myRank==0)
     {
         s="./"+caseName+"/input/run.dat"; std::ifstream runDataFile(s); chk(runDataFile,s); // run setting data input file
-        readRun(runDataFile,glb);
+        readRun(runDataFile,&glb);
         runDataFile.close();
         std::cout << "pol. order N=" << glb.sch[0] << std::endl;
         std::cout << "Num. of Modes=" << nModes(glb.sch[0]) << std::endl;
@@ -62,11 +62,11 @@ int main(int argc, char* argv[])
     if (myRank==0)
     {
         s="./"+caseName+"/input/physics.dat"; std::ifstream physicsFile(s); chk(physicsFile,s); // physics data
-        readPhysics(physicsFile,glb);
+        readPhysics(physicsFile,&glb);
         physicsFile.close();
         std::cout << "Alpha=" << glb.phy[6] << std::endl;
     }
-    MPI_Bcast(&glb.phy,7,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(&glb.phy,9,MPI_DOUBLE,0,MPI_COMM_WORLD);
 //
     computationalElement cc(glb); // initializes the computational element
 //  input of boundary conditions
@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
     inputFileMesh >> nNodes >> nCells; // reading number of grid points and number of physical cells
     xN=new vector3D[nNodes]; // grid point array    
     e=new physicalElement[nCells]; // physical cells array    
-    double volume=readMesh(inputFileMesh,inputFileLink,nNodes,xN,nCells,e,glb,&cc,BC,myRank);
+    double volume=readMesh(inputFileMesh,inputFileLink,nNodes,xN,nCells,e,&glb,&cc,BC,myRank);
     inputFileMesh.close(); inputFileLink.close();
     double totVolume=0.;
     MPI_Reduce(&volume, &totVolume, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // initialization    
@@ -204,7 +204,7 @@ int main(int argc, char* argv[])
     outputFileHist << std::setprecision(12);
     double t_start; if (myRank==0) {t_start=omp_get_wtime();}
     bool dmpR, dmpH=false;
-    if (glb.ctr[0]==0) {printOut(caseName,e,nCells,0,glb,myRank);}
+    if (glb.ctr[0]==0) {printOut(caseName,e,nCells,0,&glb,myRank);}
     double time;
 // start iterations in time
     for (int i=glb.ctr[0]+1; i<(glb.ctr[1]+1); i++)
@@ -252,7 +252,7 @@ int main(int argc, char* argv[])
         }
         if ((i % glb.ctr[2]==0)||(i==glb.ctr[1]))
         {
-            printOut(caseName,e,nCells,i,glb,myRank);
+            printOut(caseName,e,nCells,i,&glb,myRank);
         }
         if (dmpR)
         {

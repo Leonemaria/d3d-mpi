@@ -6,7 +6,7 @@ void initialConditions(std::string caseName, int nCells, physicalElement e[], co
     {
         for (int iC=0; iC<nCells; iC++)
         {
-            e[iC].setIniCond(caseName,glb);
+            e[iC].setIniCond(caseName);
         }
     }
     else
@@ -26,32 +26,34 @@ void initialConditions(std::string caseName, int nCells, physicalElement e[], co
         }
     }
 }  
-void readPhysics(std::ifstream &fin, global& glb)
+void readPhysics(std::ifstream &fin, global* g)
 {
-    fin >> glb.phy[0]; skipLine(fin, 1); // reference Mach Number
-    fin >> glb.phy[1]; skipLine(fin, 1); // reference Reynolds Number
-    fin >> glb.phy[2]; skipLine(fin, 1); // reference Froude Number
-    fin >> glb.phy[3]; skipLine(fin, 1); // reference Prandtl Number
-    fin >> glb.phy[4]; skipLine(fin, 1); // specific heats ratio
-    fin >> glb.phy[5]; skipLine(fin, 1); // Sutherland temperature ratio
-    fin >> glb.phy[6];                   // angle of attack
+    fin >> (*g).phy[0]; skipLine(fin, 1); // reference Mach Number
+    fin >> (*g).phy[1]; skipLine(fin, 1); // reference Reynolds Number
+    fin >> (*g).phy[2]; skipLine(fin, 1); // reference Froude Number
+    fin >> (*g).phy[3]; skipLine(fin, 1); // reference Prandtl Number
+    fin >> (*g).phy[4]; skipLine(fin, 1); // specific heats ratio
+    fin >> (*g).phy[5]; skipLine(fin, 1); // Sutherland temperature ratio
+    fin >> (*g).phy[6];                   // angle of attack
+    (*g).phy[7]=(*g).phy[4]*sq((*g).phy[0]);
+    (*g).phy[8]=(*g).phy[4]/((*g).phy[4]-1.);
 }
-void readRun(std::ifstream &fin, global& glb)
+void readRun(std::ifstream &fin, global* g)
 {
-    fin >> glb.sch[0]; skipLine(fin, 1);  // polynomials max order
-    fin >> glb.sch[1]; skipLine(fin, 1);  // kind of LES model
-    fin >> glb.sch[2]; skipLine(fin, 1);  // kind of convective intercell numerical flux
-    fin >> glb.ctr[0]; skipLine(fin, 1);  // initial number of time steps
-    fin >> glb.ctr[1]; skipLine(fin, 1);  // final number of time steps
-    fin >> glb.ctr[2]; skipLine(fin, 1);  // solution damping period
-    fin >> glb.ctr[3]; skipLine(fin, 1);  // residual damping period
-    fin >> glb.ctr[4]; skipLine(fin, 1); // integrated quantities damping period
-    fin >> glb.dt; skipLine(fin, 1);     // time step
-    fin >> glb.sch[3]; skipLine(fin, 1); // source terms flag
-    fin >> glb.ctr[5]; skipLine(fin, 1); // number of computed forces/moments
-    fin >> glb.sch[4];                   // relative dynamics flag
+    fin >> (*g).sch[0]; skipLine(fin, 1);  // polynomials max order
+    fin >> (*g).sch[1]; skipLine(fin, 1);  // kind of LES model
+    fin >> (*g).sch[2]; skipLine(fin, 1);  // kind of convective intercell numerical flux
+    fin >> (*g).ctr[0]; skipLine(fin, 1);  // initial number of time steps
+    fin >> (*g).ctr[1]; skipLine(fin, 1);  // final number of time steps
+    fin >> (*g).ctr[2]; skipLine(fin, 1);  // solution damping period
+    fin >> (*g).ctr[3]; skipLine(fin, 1);  // residual damping period
+    fin >> (*g).ctr[4]; skipLine(fin, 1); // integrated quantities damping period
+    fin >> (*g).dt; skipLine(fin, 1);     // time step
+    fin >> (*g).sch[3]; skipLine(fin, 1); // source terms flag
+    fin >> (*g).ctr[5]; skipLine(fin, 1); // number of computed forces/moments
+    fin >> (*g).sch[4];                   // relative dynamics flag
 }
-double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D xN[], int nCells, physicalElement e[], const global& glb, computationalElement *cc, boundaryCondition BC[], int rank)
+double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D xN[], int nCells, physicalElement e[], global* g, computationalElement *cc, boundaryCondition BC[], int rank)
 {
     double V=0.;
     int iN=-1, iC=-1, iVer[4];
@@ -77,21 +79,21 @@ double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D x
         // the link matrix is a 4x4 matrix with a row for each cell face where the first element is the indices of the connected processor
         // the second one is the index of the linked cell, the third one is the indices of the linked side
         // and the fourth is the index of the point linked to 0 point (or the boundary contition)
-        e[iC].init(iC,cc,&xN[0],iVer,l,glb,BC,rank); // physical cell initialization
+        e[iC].init(iC,cc,&xN[0],iVer,l,g,BC,rank); // physical cell initialization
         V+=e[iC].Jacobian();
     }
     return 4.*V/3.;  
 }
-void printOut(std::string caseName, physicalElement e[], int nCells, int it, const global& glb, int rank)
+void printOut(std::string caseName, physicalElement e[], int nCells, int it, const global* g, int rank)
 {
     void subCellNodes(std::ofstream &fl, int p, int n0, int n1, int n2, int n3);
     std::string iterations=std::to_string(it); std::string process=std::to_string(rank);
-    int Nm=nModes(glb.sch[0]);
+    int Nm=nModes((*g).sch[0]);
     std::ofstream outputFileSol("./"+caseName+"/output/result_pr"+process+"_it"+iterations+".dat",std::ios::binary);
-    int nData=nCells*Nm; double time=glb.dt*it;
+    int nData=nCells*Nm; double time=(*g).dt*it;
     outputFileSol.write(reinterpret_cast<const char*>(&nData), sizeof(int));
     outputFileSol.write(reinterpret_cast<const char*>(&time), sizeof(double));
-    double* aM; int N=glb.sch[0];
+    double* aM; int N=(*g).sch[0];
     for (int i=0; i<nCells; i++)
     {
         outputFileSol.write(reinterpret_cast<const char*>(&N), sizeof(int));
