@@ -33,7 +33,7 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  global* g)
     }
     if (caseName=="naca0012") // flow around a cylinder of diameter D=1
     {
-        double alph=(*g).phy[6]*radPerDeg;
+        double alph=(*g).phy[8]*radPerDeg;
         double r=std::sqrt(sq(x[0])+sq(x[1]));
         if (r>1.) {u=cos(alph); v=sin(alph);}
         E=energy(rho,rho*u,rho*v,rho*w,p,g);
@@ -55,10 +55,10 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  global* g)
 void srcFunc(std::string caseName, matrix* B, matrix* q, global* g)
 {
     int Np=(*q).nR();
-    double gaM2=(*g).phy[7], Re=(*g).phy[1];
+    double gaM2=(*g).phy[6], Re=(*g).phy[1];
     if (caseName=="adiabaticPoiseuille") // Adiabatic Poiseuille plane channel flow with channel height h=1
     {
-        double p_x_gM2=8./Re, ggm1=(*g).phy[8];
+        double p_x_gM2=8./Re, ggm1=(*g).phy[7];
         for (int i=0; i<Np; i++)
         {
             (*B).set(i,0,0.);

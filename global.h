@@ -12,9 +12,9 @@ struct global
         // phy[3]: reference Prandtl number Pr            
         // phy[4]: air specific heats ratio gamma            
         // phy[5]: Suherland temperature ratio         
-        // phy[6]: angle of attack
-        // phy[7]: gamma*Ma^2
-        // phy[8]: gamma/(gamma-1)
+        // phy[6]: gamma*Ma^2
+        // phy[7]: gamma/(gamma-1)
+        // phy[8]: angle of attack
     int ctr[6]; // array of run controls
      // ctr[0]: initial number of time steps
      // ctr[1]: final number of time steps

@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
         s="./"+caseName+"/input/physics.dat"; std::ifstream physicsFile(s); chk(physicsFile,s); // physics data
         readPhysics(physicsFile,&glb);
         physicsFile.close();
-        std::cout << "Alpha=" << glb.phy[6] << std::endl;
+        std::cout << "Alpha=" << glb.phy[8] << std::endl;
     }
     MPI_Bcast(&glb.phy,9,MPI_DOUBLE,0,MPI_COMM_WORLD);
 //
@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
     boundaryCondition BC[nBC];
     if (myRank==0)
     {
-        for (int i=1; i<nBC; i++) {BC[i].input(inputFileBC,glb.phy[6]);}
+        for (int i=1; i<nBC; i++) {BC[i].input(inputFileBC,glb.phy[8]);}
     }
     for (int i=1; i<nBC; i++)
     {
@@ -222,8 +222,8 @@ int main(int argc, char* argv[])
             }
             for (int i=0; i<nJnPr; i++) // exchange the data between the processes
             {
-                MPI_Isend(qSnd[i].data(),qSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*4]); // the linking indices are sent
-                MPI_Irecv(qRcv[i].data(),qRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*4+2]); // the linking indices are received
+                MPI_Isend(qSnd[i].data(),qSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*2]); // the linking indices are sent
+                MPI_Irecv(qRcv[i].data(),qRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*2+1]); // the linking indices are received
             }
             MPI_Waitall(2*nJnPr,rqs,MPI_STATUSES_IGNORE);
             MPI_Barrier(MPI_COMM_WORLD);   
