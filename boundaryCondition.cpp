@@ -20,21 +20,33 @@ double boundaryCondition::getQ(int eq)
 {
     return qB[eq];
 }
-void boundaryCondition::input(std::ifstream &iFile, double a)
+void boundaryCondition::input(std::ifstream &iFile, global* g)
 {
     iFile >> kind[0]; skipLine(iFile, 1);
     switch(kind[0])
     {
-        case(11): // Weak-Riemann farfield (inlet/outlet) condition
+        case(11): // Weak-Riemann farfield (inlet/outlet) condition (with velocity compnents)
         {
-            double alph=a*radPerDeg, u, v;
             iFile >> qB[0]; // rho_inf
             iFile >> qB[5]; // p_inf
-            iFile >> u; // u_inf at Alpha=0
-            iFile >> v; // v_inf at Alpha=0
-            qB[6]=u*cos(alph)-v*sin(alph); // u_inf with Alpha correction
-            qB[7]=u*sin(alph)+v*cos(alph); // v_inf with Alpha correction
+            iFile >> qB[6]; // u_inf
+            iFile >> qB[7]; // v_inf
             iFile >> qB[8]; // w_inf
+        }
+        break;
+        case(12): // Weak-Riemann farfield (inlet/outlet) condition (with speed and angles)
+        {
+            double alpha, beta, V;
+            iFile >> qB[0]; // rho_inf
+            iFile >> qB[5]; // p_inf
+            iFile >> V; // air speed
+            iFile >> alpha; std::cout << "Alpha=" << alpha << "°\n";
+            alpha*=radPerDeg; // incidence angle
+            iFile >> beta; std::cout << "Beta=" << beta << "°\n";
+            beta*=radPerDeg; // incidence angle
+            qB[6]=V*cos(alpha)*cos(beta); // u_inf
+            qB[7]=V*sin(alpha)*cos(beta); // v_inf
+            qB[8]=V*sin(beta); // w_inf
         }
         break;
         case(21): // Weak-Riemann isothermal no-slip

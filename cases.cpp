@@ -1,6 +1,6 @@
 //cases.cpp
 #include "cases.h"
-void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  global* g)
+void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  global* g, boundaryCondition BC[])
 {
     double Ma=(*g).phy[0], gam=(*g).phy[4];
     double rho=1., u=0., v=0., w=0., E=1., p=1.;
@@ -33,9 +33,22 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  global* g)
     }
     if (caseName=="naca0012") // flow around a cylinder of diameter D=1
     {
-        double alph=(*g).phy[8]*radPerDeg;
         double r=std::sqrt(sq(x[0])+sq(x[1]));
-        if (r>1.) {u=cos(alph); v=sin(alph);}
+        for (int iB=0; iB<(*g).ctr[6]; iB++)
+        {
+            if (BC[iB].getKind(0)<20)
+            {
+                rho=BC[iB].getQ(0);
+                p=BC[iB].getQ(5);
+                if (r<1.) {u=0.;}
+                else
+                {
+                    u=BC[iB].getQ(6);
+                    v=BC[iB].getQ(7);
+                    w=BC[iB].getQ(8);
+                }
+            }
+        }
         E=energy(rho,rho*u,rho*v,rho*w,p,g);
     }
     if (caseName=="taylorgreen")

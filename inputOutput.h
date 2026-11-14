@@ -6,12 +6,13 @@
 #include <iomanip>
 #include "vectors.h"
 #include "physicalElement.h"
+#include "boundaryCondition.h"
 #include "constants.h"
 #include "utilities.h"
 #include "global.h"
 //
 // this is a collection of input/outpu functions
-void initialConditions(std::string caseName, int nCells,physicalElement e[], const global& glb, int rank);
+void initialConditions(std::string caseName, int nCells,physicalElement e[], const global& glb, boundaryCondition BC[], int rank);
 void readPhysics(std::ifstream &fin, global* g);   
 void readRun(std::ifstream &fin, global* g);
 double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D xN[], int nCells, physicalElement e[], global* glb, computationalElement *cc, boundaryCondition BC[], int rank);

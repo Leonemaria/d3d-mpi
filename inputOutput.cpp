@@ -1,12 +1,12 @@
 //inputOutput.cpp
 #include "inputOutput.h"
-void initialConditions(std::string caseName, int nCells, physicalElement e[], const global& glb, int rank)  // set initial conditions
+void initialConditions(std::string caseName, int nCells, physicalElement e[], const global& glb, boundaryCondition BC[], int rank)  // set initial conditions
 {
     if (glb.ctr[0]==0)
     {
         for (int iC=0; iC<nCells; iC++)
         {
-            e[iC].setIniCond(caseName);
+            e[iC].setIniCond(caseName,BC);
         }
     }
     else
@@ -34,7 +34,6 @@ void readPhysics(std::ifstream &fin, global* g)
     fin >> (*g).phy[3]; skipLine(fin, 1); // reference Prandtl Number
     fin >> (*g).phy[4]; skipLine(fin, 1); // specific heats ratio
     fin >> (*g).phy[5]; skipLine(fin, 1); // Sutherland temperature ratio
-    fin >> (*g).phy[8];                   // angle of attack
     (*g).phy[6]=(*g).phy[4]*sq((*g).phy[0]); // gamma*Ma^2
     (*g).phy[7]=(*g).phy[4]/((*g).phy[4]-1.); // gamma/(gamma-1)
 }

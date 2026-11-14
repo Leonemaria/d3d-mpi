@@ -42,6 +42,27 @@ int main(int argc, char* argv[])
     MPI_Bcast(&nameSize,1,MPI_INT,0,MPI_COMM_WORLD);
     caseName.resize(nameSize);
     MPI_Bcast(&caseName[0],nameSize,MPI_CHAR,0,MPI_COMM_WORLD);
+// *************************************
+//  input of boundary conditions
+    int nBC; std::ifstream inputFileBC;
+    if (myRank==0)
+    {
+        s="./"+caseName+"/input/BC.dat"; inputFileBC.open(s); chk(inputFileBC,s); // boundary conditions definition input file
+        inputFileBC >> nBC; nBC++; skipLine(inputFileBC, 1); // reading number of boundary conditions
+        glb.ctr[6]=nBC;
+    }
+    MPI_Bcast(&nBC,1,MPI_INT,0,MPI_COMM_WORLD);  
+    boundaryCondition BC[nBC];
+    if (myRank==0)
+    {
+        for (int i=1; i<nBC; i++) {BC[i].input(inputFileBC,&glb);}
+    }
+    for (int i=1; i<nBC; i++)
+    {
+        MPI_Bcast(BC[i].intData(),2,MPI_INT,0,MPI_COMM_WORLD);  
+        MPI_Bcast(BC[i].doubleData(),10,MPI_DOUBLE,0,MPI_COMM_WORLD);        
+    }
+//***************************************
 // input of run data
     if (myRank==0)
     {
@@ -55,39 +76,21 @@ int main(int argc, char* argv[])
         std::cout << "LES model=" << glb.sch[1] << std::endl;
     }
     MPI_Bcast(&glb.dt,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Bcast(glb.ctr,6,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Bcast(glb.ctr,7,MPI_INT,0,MPI_COMM_WORLD);
     MPI_Bcast(glb.sch,5,MPI_INT,0,MPI_COMM_WORLD);
     matrix forces(glb.ctr[5],6);
+//***************************************
     // imput of physical parametrs
     if (myRank==0)
     {
         s="./"+caseName+"/input/physics.dat"; std::ifstream physicsFile(s); chk(physicsFile,s); // physics data
         readPhysics(physicsFile,&glb);
         physicsFile.close();
-        std::cout << "Alpha=" << glb.phy[8] << std::endl;
     }
-    MPI_Bcast(&glb.phy,9,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(&glb.phy,16,MPI_DOUBLE,0,MPI_COMM_WORLD);
 //
-    computationalElement cc(glb); // initializes the computational element
-//  input of boundary conditions
-    int nBC; std::ifstream inputFileBC;
-    if (myRank==0)
-    {
-        s="./"+caseName+"/input/BC.dat"; inputFileBC.open(s); chk(inputFileBC,s); // boundary conditions definition input file
-        inputFileBC >> nBC; nBC++; skipLine(inputFileBC, 1); // reading number of boundary conditions
-    }
-    MPI_Bcast(&nBC,1,MPI_INT,0,MPI_COMM_WORLD);  
-    boundaryCondition BC[nBC];
-    if (myRank==0)
-    {
-        for (int i=1; i<nBC; i++) {BC[i].input(inputFileBC,glb.phy[8]);}
-    }
-    for (int i=1; i<nBC; i++)
-    {
-        MPI_Bcast(BC[i].intData(),2,MPI_INT,0,MPI_COMM_WORLD);  
-        MPI_Bcast(BC[i].doubleData(),10,MPI_DOUBLE,0,MPI_COMM_WORLD);        
-    }
 //***************************************
+   computationalElement cc(glb); // initializes the computational element
 //  input of geometry (points, elements, links and boundary conditions)
     unsigned int nNodes, nCells, totCells;
     vector3D* xN=nullptr;
@@ -105,6 +108,7 @@ int main(int argc, char* argv[])
     MPI_Reduce(&nCells, &totCells, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD); // initialization    
     if (myRank==0) {std::cout << "Volume=" << totVolume << std::endl; std::cout << "Num. of Cells=" << totCells << std::endl;}
     MPI_Barrier(MPI_COMM_WORLD);   
+//***************************************
 // preparation for mpi messaging
     int nJnPr=0; // number of joined processes
     std::vector<int>jnPr; // contains the ranks of connected processes
@@ -187,7 +191,7 @@ int main(int argc, char* argv[])
     }
     std::vector<std::vector<int>>().swap(jnFaces);
 //
-    initialConditions(caseName,nCells,e,glb,myRank);
+    initialConditions(caseName,nCells,e,glb,BC,myRank);
     matrix H;
 // start time marching simulation       
     std::ofstream outputFileRes, outputFileHist, outputFileForce;

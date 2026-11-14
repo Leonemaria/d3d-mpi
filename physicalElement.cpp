@@ -64,7 +64,7 @@ void physicalElement::init(int my, computationalElement *c, vector3D x[], int iV
         if ((l.get(iS,0)==myRank)&&(l.get(iS,1)==mySelf)&(l.get(iS,2)==iS))
         {
             setBC(iS);
-            if ((BC[join.get(iS,3)].getKind(0)==11)&&(rot[iS].size()==0)) {mkRot(iS);}  
+            if ((BC[join.get(iS,3)].getKind(0)<20)&&(rot[iS].size()==0)) {mkRot(iS);}  
         }    
     }    
 }
@@ -316,14 +316,14 @@ void physicalElement::setBC(int iS)
 {
     BS[iS]=true;
 }
-void physicalElement::setIniCond(std::string caseName)
+void physicalElement::setIniCond(std::string caseName, boundaryCondition BC[])
 {
     vector3D xP;
     matrix qq(Npq,nEq);
     for (int iP=0; iP<Npq; iP++)
     {
         xP=getX((*cE).getRq(iP));
-        iniFunc(caseName,iP,xP,&qq,glb);
+        iniFunc(caseName,iP,xP,&qq,glb,BC);
     }
     A=(*cE).getE()*qq;
 }
@@ -371,6 +371,9 @@ void physicalElement::step_I(double dt, int m, double time, std::string nameCase
                 switch (kind)
                 {
                     case 11: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014, p.18 and 19)
+                        qMed=getQAS(iS,i);
+                    break;
+                    case 12: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014, p.18 and 19)
                         qMed=getQAS(iS,i);
                     break;
                     case 21: // weak-Riemann no-slip isothermal condition (Mengaldo et al. 2014, p.18 and 19)
@@ -703,6 +706,26 @@ void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix
         }
         break;
         case 11: // Weak-Riemann farfield condition, neglecting viscous effects (Mengaldo et al. 2014, p.7) 
+        {
+        // The assigned values are: rho=qB[0], p=qB[5], u=qB[6], v=qB[7], w=qB[8]
+            double mu, k, u, v, w, T, ggm1=(*glb).phy[7];
+            symTensor Sr, tau; vector3D gradT, heat;
+            matrix qInt(1,nEq); matrix qExt(1,nEq);
+            matrix bF[3]; bF[0].dim(1,nEq); bF[1].dim(1,nEq); bF[2].dim(1,nEq);
+            for (int i=0; i<Npq2; i++)
+            {
+                qInt=qS[iS].row(i);
+                qExt.set(0,0,(*BC).getQ(0)); // external density equal to farfield value
+                qExt.set(0,1,(*BC).getQ(6)*qExt.get(0)); // x momentum external value (equal to farfield value)
+                qExt.set(0,2,(*BC).getQ(7)*qExt.get(0)); // y momentum external value (equal to farfield value)
+                qExt.set(0,3,(*BC).getQ(8)*qExt.get(0)); // z momentum external value (equal to farfield value)
+                qExt.set(0,4,energy(qExt.get(0),qExt.get(1),qExt.get(2),qExt.get(3),(*BC).getQ(5),glb)); // external energy  (equal to farfield value)
+                //
+                flxS[iS].set(i,0,HLLC(iS,qInt,qExt));
+            }
+        }
+        break;
+        case 12: // Weak-Riemann farfield condition, neglecting viscous effects (Mengaldo et al. 2014, p.7) 
         {
         // The assigned values are: rho=qB[0], p=qB[5], u=qB[6], v=qB[7], w=qB[8]
             double mu, k, u, v, w, T, ggm1=(*glb).phy[7];

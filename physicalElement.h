@@ -52,7 +52,7 @@ class physicalElement
         void print();
         void setAM(int i, int eq, double a);
         void setBC(int iS);
-        void setIniCond(std::string caseName);
+        void setIniCond(std::string caseName, boundaryCondition BC[]);
         void setJoin(int i, int j, int k);
         void step_0(boundaryCondition BC[], int myRank, matrix qSnd[]);
         void step_I(double dt, int m, double time, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool dmpH, int myRank,
