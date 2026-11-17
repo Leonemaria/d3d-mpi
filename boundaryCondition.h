@@ -6,6 +6,7 @@
 #include <fstream>
 #include <cstdlib>
 #include "constants.h"
+#include "global.h"
 #include "utilities.h"
 #include "physicalRelations.h"
 
@@ -19,7 +20,7 @@ class boundaryCondition
 // public methods declarations
         int getKind(int i);
         double getQ(int eq);
-        void input(std::ifstream &iFile, double a);
+        void input(std::ifstream &iFile, global* g);
         double* doubleData();
         int* intData();
     private:
