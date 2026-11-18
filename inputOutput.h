@@ -14,6 +14,7 @@
 // this is a collection of input/outpu functions
 void initialConditions(std::string caseName, int nCells,physicalElement e[], const global& glb, boundaryCondition BC[], int rank);
 void readPhysics(std::ifstream &fin, global* g);   
+void readRelative(std::ifstream &fin, global* g);   
 void readRun(std::ifstream &fin, global* g);
 double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D xN[], int nCells, physicalElement e[], global* glb, computationalElement *cc, boundaryCondition BC[], int rank);
 void printOut(std::string caseName, physicalElement e[], int nCells, int it, const global* g, int rank);

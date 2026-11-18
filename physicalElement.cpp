@@ -109,6 +109,18 @@ void physicalElement::convFluxes(int iS)
         flxS[iS].add(i,0,cF[0]*n[iS][0]+cF[1]*n[iS][1]+cF[2]*n[iS][2]);
     }
 }
+void physicalElement::fictForces(matrix* B, matrix* q)
+{
+    double rho;
+    vector3D x,f;
+    for (int i=0; i<Npq; i++)
+    {
+        rho=(*q).get(i,0);
+        x=getX((*cE).getRq(i));
+        f=fictitious(x,(*q).get(i,1)/rho,(*q).get(i,2)/rho,(*q).get(i,3)/rho,glb);
+        (*B).add(i,1,f[0]*rho); (*B).add(i,2,f[1]*rho); (*B).add(i,3,f[2]*rho);
+    }
+}
 matrix physicalElement::getHist()
 {
     return H;
@@ -320,10 +332,10 @@ void physicalElement::setIniCond(std::string caseName, boundaryCondition BC[])
 {
     vector3D xP;
     matrix qq(Npq,nEq);
-    for (int iP=0; iP<Npq; iP++)
+    for (int i=0; i<Npq; i++)
     {
-        xP=getX((*cE).getRq(iP));
-        iniFunc(caseName,iP,xP,&qq,glb,BC);
+        xP=getX((*cE).getRq(i));
+        iniFunc(caseName,i,xP,&qq,glb,BC);
     }
     A=(*cE).getE()*qq;
 }
@@ -349,7 +361,7 @@ void physicalElement::step_0(boundaryCondition BC[], int myRank, matrix qSnd[])
         }        
     }
 }
-void physicalElement::step_I(double dt, int m, double time, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool dmpH, int myRank,
+void physicalElement::step_I(int m, std::string nameCase, physicalElement e[], boundaryCondition BC[], bool dmpH, int myRank,
      matrix qRcv[], matrix fSnd[], matrix* forces)
 // computes the auxiliary variable gradients and physical fluxes on internal and side quadrature points
 // the internal fluxes (convective-viscous) are stored in the matrix array fluxq[3]: the i-th matrix contains the i-th component of fluxes
@@ -445,7 +457,7 @@ void physicalElement::step_I(double dt, int m, double time, std::string nameCase
     {
         if (BS[iS])
         {
-            boundaryFluxes(time,&q_xS[iS],&q_yS[iS],&q_zS[iS],iS,&BC[join.get(iS,3)],forces,dmpH);
+            boundaryFluxes(&q_xS[iS],&q_yS[iS],&q_zS[iS],iS,&BC[join.get(iS,3)],forces,dmpH);
         }
         else
         {
@@ -467,11 +479,13 @@ void physicalElement::step_I(double dt, int m, double time, std::string nameCase
     }
     //
     convFluxes(flxq,&qq); // add convective flux on volume quadrature points
-    matrix B; if ((*glb).sch[3]>0) {B.dim(Npq,nEq); srcFunc(nameCase,&B,&qq,glb);} // possibly computes the sources terms
-    (*cE).RK_V(dt,m,&KA,&A,&A_0,flxq,&B,r_x,r_y,r_z); //computation of mode amplitude of condervative variables (just volume integrals) 
+    matrix B; if (((*glb).sch[3]>0)||((*glb).sch[4]>0)) {B.dim(Npq,nEq);}
+    if ((*glb).sch[3]>0) {srcFunc(nameCase,&B,&qq,glb);} // possibly computes the sources terms
+    if ((*glb).sch[4]>0) {fictForces(&B,&qq);}
+    (*cE).RK_V((*glb).snc[0],m,&KA,&A,&A_0,flxq,&B,r_x,r_y,r_z); //computation of mode amplitude of condervative variables (just volume integrals) 
 }
 //
-void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, int myRank, matrix qRcv[], matrix fRcv[])
+void physicalElement::step_II(int m, physicalElement e[], bool dmpR, int myRank, matrix qRcv[], matrix fRcv[])
 {
     matrix numFlx[4]; for (int iS=0; iS<4; iS++) {numFlx[iS].dim(Npq2,nEq);}
     for (int iS=0; iS<4; iS++)
@@ -547,7 +561,7 @@ void physicalElement::step_II(double dt, int m, physicalElement e[], bool dmpR, 
             }
         }
     }
-    (*cE).RK_S(dt,m,&KA,&A,&A_0,numFlx); //computation of mode amplitude of condervative variables (addition of surface integral)
+    (*cE).RK_S((*glb).snc[0],m,&KA,&A,&A_0,numFlx); //computation of mode amplitude of condervative variables (addition of surface integral)
     if (dmpR) {res=integralV((*cE).getPHI()*(A.col(0)-A_0.col(0)));} // computes the residual
 }
 double* physicalElement::toAM()
@@ -669,7 +683,7 @@ void physicalElement::viscFluxes(matrix* dx, matrix* dy, matrix* dz, int iS)
         break;
     }
 }
-void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix* dz, int iS, boundaryCondition* BC, matrix* forces, bool dmpH)
+void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS, boundaryCondition* BC, matrix* forces, bool dmpH)
 // computation of a face normal viscous flux
 {
     int kind=(*BC).getKind(0); // the boundary type
@@ -708,8 +722,6 @@ void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix
         case 11: // Weak-Riemann farfield condition, neglecting viscous effects (Mengaldo et al. 2014, p.7) 
         {
         // The assigned values are: rho=qB[0], p=qB[5], u=qB[6], v=qB[7], w=qB[8]
-            double mu, k, u, v, w, T, ggm1=(*glb).phy[7];
-            symTensor Sr, tau; vector3D gradT, heat;
             matrix qInt(1,nEq); matrix qExt(1,nEq);
             matrix bF[3]; bF[0].dim(1,nEq); bF[1].dim(1,nEq); bF[2].dim(1,nEq);
             for (int i=0; i<Npq2; i++)
@@ -720,6 +732,7 @@ void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix
                 qExt.set(0,2,(*BC).getQ(7)*qExt.get(0)); // y momentum external value (equal to farfield value)
                 qExt.set(0,3,(*BC).getQ(8)*qExt.get(0)); // z momentum external value (equal to farfield value)
                 qExt.set(0,4,energy(qExt.get(0),qExt.get(1),qExt.get(2),qExt.get(3),(*BC).getQ(5),glb)); // external energy  (equal to farfield value)
+                if ((*glb).sch[4]>0) {relativeQ(&qExt,getX((*cE).getRqS(iS,i)),glb);}
                 //
                 flxS[iS].set(i,0,HLLC(iS,qInt,qExt));
             }
@@ -728,8 +741,6 @@ void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix
         case 12: // Weak-Riemann farfield condition, neglecting viscous effects (Mengaldo et al. 2014, p.7) 
         {
         // The assigned values are: rho=qB[0], p=qB[5], u=qB[6], v=qB[7], w=qB[8]
-            double mu, k, u, v, w, T, ggm1=(*glb).phy[7];
-            symTensor Sr, tau; vector3D gradT, heat;
             matrix qInt(1,nEq); matrix qExt(1,nEq);
             matrix bF[3]; bF[0].dim(1,nEq); bF[1].dim(1,nEq); bF[2].dim(1,nEq);
             for (int i=0; i<Npq2; i++)
@@ -740,6 +751,7 @@ void physicalElement::boundaryFluxes(double time, matrix* dx, matrix* dy, matrix
                 qExt.set(0,2,(*BC).getQ(7)*qExt.get(0)); // y momentum external value (equal to farfield value)
                 qExt.set(0,3,(*BC).getQ(8)*qExt.get(0)); // z momentum external value (equal to farfield value)
                 qExt.set(0,4,energy(qExt.get(0),qExt.get(1),qExt.get(2),qExt.get(3),(*BC).getQ(5),glb)); // external energy  (equal to farfield value)
+                if ((*glb).sch[4]>0) {relativeQ(&qExt,getX((*cE).getRqS(iS,i)),glb);}
                 //
                 flxS[iS].set(i,0,HLLC(iS,qInt,qExt));
             }

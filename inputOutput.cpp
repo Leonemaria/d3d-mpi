@@ -33,9 +33,21 @@ void readPhysics(std::ifstream &fin, global* g)
     fin >> (*g).phy[2]; skipLine(fin, 1); // reference Froude Number
     fin >> (*g).phy[3]; skipLine(fin, 1); // reference Prandtl Number
     fin >> (*g).phy[4]; skipLine(fin, 1); // specific heats ratio
-    fin >> (*g).phy[5]; skipLine(fin, 1); // Sutherland temperature ratio
+    fin >> (*g).phy[5];                   // Sutherland temperature ratio
     (*g).phy[6]=(*g).phy[4]*sq((*g).phy[0]); // gamma*Ma^2
     (*g).phy[7]=(*g).phy[4]/((*g).phy[4]-1.); // gamma/(gamma-1)
+}
+void readRelative(std::ifstream &fin, global* g)
+{
+    fin >> (*g).ctr[7]; skipLine(fin, 1);  // rotation axis index
+    fin >> (*g).phy[8]; skipLine(fin, 1); //  revolution Strouhal number
+    fin >> (*g).phy[9]; skipLine(fin, 1); //  amplitude of the rotational oscillation [Deg]
+    fin >> (*g).phy[10]; skipLine(fin, 1); // Strouhal of the rotational oscillation
+    fin >> (*g).phy[11]; skipLine(fin, 1); // initial phase[Deg] of the rotational oscillation (sinus)
+    fin >> (*g).ctr[8]; skipLine(fin, 1);  // translation axis index
+    fin >> (*g).phy[12]; skipLine(fin, 1); // amplitude of the translational oscillation
+    fin >> (*g).phy[13]; skipLine(fin, 1); // Strouhal of the translational oscillation
+    fin >> (*g).phy[14];                   // initial phase [Deg] of the translational oscillation (sinus)
 }
 void readRun(std::ifstream &fin, global* g)
 {
@@ -47,7 +59,7 @@ void readRun(std::ifstream &fin, global* g)
     fin >> (*g).ctr[2]; skipLine(fin, 1);  // solution damping period
     fin >> (*g).ctr[3]; skipLine(fin, 1);  // residual damping period
     fin >> (*g).ctr[4]; skipLine(fin, 1); // integrated quantities damping period
-    fin >> (*g).dt; skipLine(fin, 1);     // time step
+    fin >> (*g).snc[0]; skipLine(fin, 1); // time step
     fin >> (*g).sch[3]; skipLine(fin, 1); // source terms flag
     fin >> (*g).ctr[5]; skipLine(fin, 1); // number of computed forces/moments
     fin >> (*g).sch[4];                   // relative dynamics flag
@@ -60,7 +72,7 @@ double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D x
     {
         fin1 >> iN >> xN[iN][0] >> xN[iN][1] >> xN[iN][2]; //grid point reading from mesh file (each point is labeled by a sequential number and is defined by three coordinates)
     }
-    intMatrix l(4,4); l.zero();
+    intMatrix l(4,4);
     int i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15;
     //reading link data:
     while (iC<nCells-1) // reading of the cell list (second part of the mesh file) and linkings (link file)
@@ -89,7 +101,7 @@ void printOut(std::string caseName, physicalElement e[], int nCells, int it, con
     std::string iterations=std::to_string(it); std::string process=std::to_string(rank);
     int Nm=nModes((*g).sch[0]);
     std::ofstream outputFileSol("./"+caseName+"/output/result_pr"+process+"_it"+iterations+".dat",std::ios::binary);
-    int nData=nCells*Nm; double time=(*g).dt*it;
+    int nData=nCells*Nm; double time=(*g).snc[0]*it;
     outputFileSol.write(reinterpret_cast<const char*>(&nData), sizeof(int));
     outputFileSol.write(reinterpret_cast<const char*>(&time), sizeof(double));
     double* aM; int N=(*g).sch[0];

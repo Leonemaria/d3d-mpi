@@ -18,10 +18,11 @@ class computationalElement
     public:
 // constructors/destructor declarations
         computationalElement();
-        computationalElement(const global& glb);
+        computationalElement(global* g);
         ~computationalElement();
 // public methods declarations
-        vector3D getRq(int k); // return the computational coordinates vector [r,s] of the k-th quadrature point
+        vector3D getRq(int i); // return the computational coordinates vector [r,s] of the i-th quadrature point in the volume
+        vector3D getRqS(int iS, int i); // return the computational coordinates vector [r,s] of the i-th quadrature point of the k-th face
         matrix getPHI();
         matrix getPHIS(int iS);
         matrix getE();
@@ -32,14 +33,14 @@ class computationalElement
         matrix RHS_V(matrix f[], matrix* B, vector3D r_x, vector3D r_y, vector3D r_z);
         matrix RHS_S(matrix fS[]);
         int extIndex(int i, int j);
-        int time(int i, int m, double d);
     private:
 // private variable declarations
-        int src;
+        int src=0;
         int N, Nm; //element polynomial order, number of modes
         int Npq, Npq2; // number of volume quadrature points, number of face quadrature points
         intMatrix extP;
-        vector3D* rq=nullptr; // array of quadrature point coordinates [r,s,t]
+        vector3D* rq=nullptr; // array of volume quadrature point coordinates [r,s,t]
+        vector3D* rq2=nullptr; // array of face quadrature point coordinates [r,s,t]
         matrix w2D; // column matrix of triangle quadrature point weights
         matrix w3D; // column matrix of volume quadrature point weights
         matrix PHI, E;

@@ -10,6 +10,10 @@
 #include "computationalElement.h"
 #include "global.h"
 // this is a collection of usefull physical relations
+void relativeQ(matrix* q, vector3D x, global *g);
+vector3D fictitious(vector3D x, double u, double v, double w, global* g);
+void now(int i, int m, global* g);
+vector3D dragVelocity(vector3D x, global* g);
 double energy(double rho, double rhoU, double rhoV, double rhoW, double p, global* g);
 double pressure(double rho, double rhoU, double rhoV, double rhoW, double E, global* g);
 double pressure(matrix* q, global* g);

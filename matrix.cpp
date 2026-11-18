@@ -13,7 +13,6 @@ matrix::matrix(int n, int m)
 matrix::matrix(int n)
 {
     dim(n);
-    zero();
 }
 // copy constructors
 matrix::matrix(const matrix& other)
@@ -546,6 +545,7 @@ void intMatrix::dim(int n, int m)
     if (size()>0) {delete[] a; a=nullptr;}
     nr=n; nc=m;
     a=new int[nc*nr];
+    zero();
 }
 void intMatrix::dim(int n)
 {

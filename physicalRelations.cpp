@@ -5,6 +5,71 @@ double energy(double rho, double rhoU, double rhoV, double rhoW, double p, globa
     double gaM2=(*g).phy[4]*sq((*g).phy[0]);
     return p/((*g).phy[4]-1.)+0.5*gaM2*(sq(rhoU)+sq(rhoV)+sq(rhoW))/rho;
 }
+void now(int i, int m, global* g)
+{
+    double time, amp, angFr, phi;
+    switch(m)
+    {
+        case(1):
+            time=(*g).snc[0]*(i+0.39175222657189);
+        break;
+        case(2):
+            time=(*g).snc[0]*(i+0.58607968931154);
+        break;
+        case(3):
+            time=(*g).snc[0]*(i+0.47454236312140);
+        break;
+        case(4):
+            time=(*g).snc[0]*(i+0.93501063096765);
+        break;
+    }
+    if ((*g).sch[4]>0)
+    {
+        amp=radPerDeg*(*g).phy[9]; angFr=2*pi*(*g).phy[10]; phi=radPerDeg*(*g).phy[11];
+        (*g).snc[2]=2.*pi*(*g).phy[8]+angFr*amp*std::cos(angFr*time+phi);
+        (*g).snc[3]=-sq(angFr)*amp*std::sin(angFr*time+phi);
+        amp=radPerDeg*(*g).phy[12]; angFr=2*pi*(*g).phy[13]; phi=radPerDeg*(*g).phy[14];
+        (*g).snc[4]=angFr*amp*std::cos(angFr*time+phi);
+        (*g).snc[5]=-sq(angFr)*amp*std::sin(angFr*time+phi);
+    }
+    (*g).snc[1]=time;
+}
+void relativeQ(matrix* q, vector3D x, global *g) // corrects the momentum setting relative velocities
+{
+    double r, rho=(*q).get(0);
+    vector3D v(0.,0.,0.), omega(0.,0.,0.);
+    if ((*g).ctr[7]>0)
+    {
+        omega[(*g).ctr[7]-1]=(*g).snc[2];
+        v=-omega.cross(x);
+    }
+    if ((*g).ctr[8]>0)
+    {
+        v[(*g).ctr[8]-1]-=(*g).snc[4];
+    }
+    (*q).add(1,v[0]*rho);
+    (*q).add(2,v[1]*rho);
+    (*q).add(3,v[2]*rho);
+}
+vector3D fictitious(vector3D x, double u, double v, double w, global* g)  // this returns the fictitious force/mass
+{
+    vector3D a(0.,0.,0.), va(u,v,w), vr(0.,0.,0.), omega(0.,0.,0.), dOmdt(0.,0.,0.);
+    if ((*g).ctr[7]>0)
+    {
+        omega[(*g).ctr[7]-1]=(*g).snc[2];
+        dOmdt[(*g).ctr[7]-1]=(*g).snc[3];
+        vr=va-omega.cross(x);
+        a-=dOmdt.cross(x)+omega.cross(omega.cross(x))+2.*omega.cross(vr);
+    }
+    if ((*g).ctr[8]>0)
+    {
+        a[(*g).ctr[8]-1]-=(*g).snc[5];
+    }
+    return a;
+}
+
+
+
 double pressure(double rho, double rhoU, double rhoV, double rhoW, double E, global* g)
 {
     double gaM2=(*g).phy[4]*sq((*g).phy[0]);

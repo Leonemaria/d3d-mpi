@@ -72,11 +72,10 @@ int main(int argc, char* argv[])
         std::cout << "pol. order N=" << glb.sch[0] << std::endl;
         std::cout << "Num. of Modes=" << nModes(glb.sch[0]) << std::endl;
         std::cout << "src=" << glb.sch[3] << std::endl;
-        std::cout << "dt=" << glb.dt << std::endl;
+        std::cout << "dt=" << glb.snc[1] << std::endl;
         std::cout << "LES model=" << glb.sch[1] << std::endl;
     }
-    MPI_Bcast(&glb.dt,1,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Bcast(glb.ctr,7,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Bcast(&glb.snc[0],1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(glb.sch,5,MPI_INT,0,MPI_COMM_WORLD);
     matrix forces(glb.ctr[5],6);
 //***************************************
@@ -86,11 +85,18 @@ int main(int argc, char* argv[])
         s="./"+caseName+"/input/physics.dat"; std::ifstream physicsFile(s); chk(physicsFile,s); // physics data
         readPhysics(physicsFile,&glb);
         physicsFile.close();
+        if (glb.sch[4]>0)
+        {
+            s="./"+caseName+"/input/relative.dat"; std::ifstream physicsFile(s); chk(physicsFile,s); // physics data
+            readRelative(physicsFile,&glb);
+            physicsFile.close();
+        }
     }
-    MPI_Bcast(&glb.phy,16,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(&glb.phy,15,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(glb.ctr,9,MPI_INT,0,MPI_COMM_WORLD);
 //
 //***************************************
-   computationalElement cc(glb); // initializes the computational element
+   computationalElement cc(&glb); // initializes the computational element
 //  input of geometry (points, elements, links and boundary conditions)
     unsigned int nNodes, nCells, totCells;
     vector3D* xN=nullptr;
@@ -209,7 +215,8 @@ int main(int argc, char* argv[])
     double t_start; if (myRank==0) {t_start=omp_get_wtime();}
     bool dmpR, dmpH=false;
     if (glb.ctr[0]==0) {printOut(caseName,e,nCells,0,&glb,myRank);}
-    double time;
+//
+// ***************************************************************************
 // start iterations in time
     for (int i=glb.ctr[0]+1; i<(glb.ctr[1]+1); i++)
     {
@@ -217,7 +224,7 @@ int main(int argc, char* argv[])
         {
            if ((ii==4)&&(i % glb.ctr[3]==0)){dmpR=true;} else {dmpR=false;}
            if ((ii==0)&&(i % glb.ctr[4]==0)){dmpH=true;} else {dmpH=false;}
-           time=cc.time(i,ii,glb.dt);
+           now(i,ii,&glb);
 // compute (for all elements) conservative and auxiliary (primitive) variables on side quadrature points
             #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
@@ -235,11 +242,11 @@ int main(int argc, char* argv[])
             #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
             {
-                e[iC].step_I(glb.dt,ii,time,caseName,e,BC,dmpH,myRank,qRcv,fSnd,&forces); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
+                e[iC].step_I(ii,caseName,e,BC,dmpH,myRank,qRcv,fSnd,&forces); // computes the auxiliary variable gradients and physical fluxes on all quadrature points
                 // then updates the conservative variable modal amplitude making a time substep (with volume integrals only)
             }
 // computes numerical fluxes and advances the solution
-
+//
             for (int i=0; i<nJnPr; i++) // exchange the data between the processes
             {
                 MPI_Isend(fSnd[i].data(),fSnd[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*2]); // the linking indices are sent
@@ -247,11 +254,11 @@ int main(int argc, char* argv[])
             }
             MPI_Waitall(2*nJnPr,rqs,MPI_STATUSES_IGNORE);
             MPI_Barrier(MPI_COMM_WORLD);
-
+//
             #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
             {
-                e[iC].step_II(glb.dt,ii,e,dmpR,myRank,qRcv,fRcv); // completes the substep adding surface integral
+                e[iC].step_II(ii,e,dmpR,myRank,qRcv,fRcv); // completes the substep adding surface integral
             }
         }
         if ((i % glb.ctr[2]==0)||(i==glb.ctr[1]))
@@ -264,7 +271,7 @@ int main(int argc, char* argv[])
             for (int iC=0; iC<nCells; iC++)
             {
                 residual+=std::abs(e[iC].getResidual());
-                eCFL=e[iC].CFL(glb.dt);
+                eCFL=e[iC].CFL(glb.snc[1]);
                 if (eCFL>maxCFL) {maxCFL=eCFL;}
             }
             MPI_Reduce(&residual,&totResidual,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
@@ -289,7 +296,7 @@ int main(int argc, char* argv[])
             MPI_Reduce(forces.data(),glFo,6*glb.ctr[5],MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
             if(myRank==0)
             {
-                outputFileHist << i*glb.dt;
+                outputFileHist << i*glb.snc[1];
                 for (int j=0; j<H.nC(); j++)
                 {
                     outputFileHist << " " << glH[j]/totVolume;

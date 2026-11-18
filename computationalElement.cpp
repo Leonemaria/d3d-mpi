@@ -5,12 +5,12 @@
 computationalElement::computationalElement()
 {
 }
-computationalElement::computationalElement(const global& glb)
+computationalElement::computationalElement(global* g)
 {
 //
     // the computational tetrahedral element (according to Hesthaven&Waburton 2008, p.409)
-    src=glb.sch[3];
-    N=glb.sch[0]; Nm=nModes(N); // polynomial order and number of nodal points
+    if (((*g).sch[3]>0)||((*g).sch[4]>0)) {src=1;}
+    N=(*g).sch[0]; Nm=nModes(N); // polynomial order and number of nodal points
     int NF=N/2; NF=N;
     int NmF=nModes(NF);
     vector3D vr[4]; // vertices of right-angled tetrahedron
@@ -70,7 +70,7 @@ computationalElement::computationalElement(const global& glb)
     }
 //
     gP=gaussPointsAndWeights2D(N*2);  // reads the points and weights for Gauss face quadrature of order oq2
-    Npq2=gP.nR(); vector3D rq2[Npq2*4];
+    Npq2=gP.nR(); rq2=new vector3D[Npq2*4];
     w2D.dim(Npq2*4);
     extP.dim(Npq2,3); double toll=0.00000001;
     double lambda1,lambda2,lambda3; // baricentric coordinates
@@ -119,9 +119,13 @@ int computationalElement::extIndex(int i, int j)
 {
     return extP.get(i,j); // returs the index (on the face) of the external corresponding point 
 }
-vector3D computationalElement::getRq(int k)
+vector3D computationalElement::getRq(int i)
 {
-    return rq[k];
+    return rq[i];
+}
+vector3D computationalElement::getRqS(int iS, int i)
+{
+    return rq2[iS*Npq2+i];
 }
 matrix computationalElement::getPHI()
 {
@@ -203,24 +207,4 @@ void computationalElement::RK_S(double d, int m, matrix* KA, matrix* A, matrix* 
             (*A)-=0.226007483236906*d*RHS_S(fS);
          break;
     }
-}
-int computationalElement::time(int i, int m, double d) // RK stage time for non autononous cases (Liu and Song 2025, eq.2.2 and the following line)
-{
-    double t; i--;
-    switch(m)
-    {
-        case(1):
-            t=d*(i+0.39175222657189);
-        break;
-        case(2):
-            t=d*(i+0.58607968931154);
-        break;
-        case(3):
-            t=d*(i+0.47454236312140);
-        break;
-        case(4):
-            t=d*(i+0.93501063096765);
-        break;
-    }
-    return t;        
 }

@@ -4,8 +4,16 @@
 //
 struct global
 {
-    double dt; // time step
-    double phy[16]; // array of phyisical data
+    double snc[6]={}; // array for timing and syncronized relative kinematic values 
+        // timing:
+        // snc[0]: time step
+        // snc[1]: Runge-Kutta time
+        // relative motion
+        // snc[2]: present value of angular speed
+        // snc[3]: present value of angular acceleration
+        // snc[4]: present value of translational velocity
+        // snc[5]: present value of translational acceleration
+    double phy[15]={}; // array of phyisical data
         // phy[0]: reference Mach number Ma        
         // phy[1]: reference Reynolds number Re            
         // phy[2]: reference Froude number Fr            
@@ -14,14 +22,14 @@ struct global
         // phy[5]: Suherland temperature ratio         
         // phy[6]: gamma*Ma^2
         // phy[7]: gamma/(gamma-1)
-        // phy[8]: rotational speed (mean value)
-        // phy[9]: amplitude of the rotational oscillation
-        // phy[10]:frequency of the rotational oscillation
-        // phy[11]:initial phase (of a sinus) of the rotational oscillation
+        // phy[8]: revolution strouhal number speed
+        // phy[9]: amplitude of the rotational oscillation [Deg]
+        // phy[10]:Strouhal of the rotational oscillation
+        // phy[11]:initial phase[Deg] of the rotational oscillation (sinus)
         // phy[12]:amplitude of the traslational oscillation
-        // phy[14]:frequency of the traslational oscillation
-        // phy[15]:initial phase (of a sinus) of the traslational oscillation
-    int ctr[7]; // array of run controls
+        // phy[13]:Strouhal of the traslational oscillation
+        // phy[14]:initial phase[Deg] of the traslational oscillation (sinus)
+    int ctr[9]; // array of run controls
      // ctr[0]: initial number of time steps
      // ctr[1]: final number of time steps
      // ctr[2]: solution damping period
@@ -29,6 +37,8 @@ struct global
      // ctr[4]: traced quantities damping period
      // ctr[5]: number of computed forces/moments
      // ctr[6]: number of boundary conditions
+     // ctr[7]: index of the rotation axis
+     // ctr[8]: index of the translation axis
     int sch[5]; // array of numerical scheme definers
      // sch[0]: polynomials max order
      // sch[1]: kind of LES model
