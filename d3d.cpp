@@ -77,7 +77,6 @@ int main(int argc, char* argv[])
     }
     MPI_Bcast(&glb.snc[0],1,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(glb.sch,5,MPI_INT,0,MPI_COMM_WORLD);
-    matrix forces(glb.ctr[5],6);
 //***************************************
     // imput of physical parametrs
     if (myRank==0)
@@ -92,8 +91,9 @@ int main(int argc, char* argv[])
             physicsFile.close();
         }
     }
-    MPI_Bcast(&glb.phy,15,MPI_DOUBLE,0,MPI_COMM_WORLD);
+    MPI_Bcast(glb.phy,15,MPI_DOUBLE,0,MPI_COMM_WORLD);
     MPI_Bcast(glb.ctr,9,MPI_INT,0,MPI_COMM_WORLD);
+    matrix forces(glb.ctr[5],6);
 //
 //***************************************
    computationalElement cc(&glb); // initializes the computational element
@@ -312,7 +312,7 @@ int main(int argc, char* argv[])
     }
     delete[] e; e=nullptr; delete[] xN; xN=nullptr;
     delete[] qSnd; qSnd=nullptr; delete[] qRcv; qRcv=nullptr;
-    delete[] fSnd; fSnd=nullptr;
+    delete[] fSnd; fSnd=nullptr; delete[] fRcv; fRcv=nullptr;
     if (myRank==0) {double t_end = omp_get_wtime(); std::cout << "Elapsed time: " << t_end - t_start << " s\n";}
     //
     MPI_Finalize();
