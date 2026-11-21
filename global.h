@@ -4,15 +4,17 @@
 //
 struct global
 {
-    double snc[6]={}; // array for timing and syncronized relative kinematic values 
+    double snc[8]={}; // array for timing and syncronized relative kinematic values 
         // timing:
         // snc[0]: time step
         // snc[1]: Runge-Kutta time
-        // relative motion
-        // snc[2]: present value of angular speed
-        // snc[3]: present value of angular acceleration
-        // snc[4]: present value of translational velocity
-        // snc[5]: present value of translational acceleration
+        // relative motion:
+        // snc[2]: present value of angular displacement
+        // snc[3]: present value of angular speed
+        // snc[4]: present value of angular acceleration
+        // snc[5]: present value of translational displacement
+        // snc[6]: present value of translational velocity
+        // snc[7]: present value of translational acceleration
     double phy[15]={}; // array of phyisical data
         // phy[0]: reference Mach number Ma        
         // phy[1]: reference Reynolds number Re            

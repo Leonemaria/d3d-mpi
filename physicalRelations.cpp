@@ -26,11 +26,13 @@ void now(int i, int m, global* g)
     if ((*g).sch[4]>0)
     {
         amp=radPerDeg*(*g).phy[9]; angFr=2*pi*(*g).phy[10]; phi=radPerDeg*(*g).phy[11];
-        (*g).snc[2]=2.*pi*(*g).phy[8]+angFr*amp*std::cos(angFr*time+phi);
-        (*g).snc[3]=-sq(angFr)*amp*std::sin(angFr*time+phi);
+        (*g).snc[2]=2.*pi*(*g).phy[8]*time+amp*std::sin(angFr*time+phi);
+        (*g).snc[3]=2.*pi*(*g).phy[8]+angFr*amp*std::cos(angFr*time+phi);
+        (*g).snc[4]=-sq(angFr)*amp*std::sin(angFr*time+phi);
         amp=radPerDeg*(*g).phy[12]; angFr=2*pi*(*g).phy[13]; phi=radPerDeg*(*g).phy[14];
-        (*g).snc[4]=angFr*amp*std::cos(angFr*time+phi);
-        (*g).snc[5]=-sq(angFr)*amp*std::sin(angFr*time+phi);
+        (*g).snc[5]=amp*std::sin(angFr*time+phi);
+        (*g).snc[6]=angFr*amp*std::cos(angFr*time+phi);
+        (*g).snc[7]=-sq(angFr)*amp*std::sin(angFr*time+phi);
     }
     (*g).snc[1]=time;
 }
@@ -56,20 +58,17 @@ vector3D fictitious(vector3D x, double u, double v, double w, global* g)  // thi
     vector3D a(0.,0.,0.), va(u,v,w), vr(0.,0.,0.), omega(0.,0.,0.), dOmdt(0.,0.,0.);
     if ((*g).ctr[8]>0)
     {
-        omega[(*g).ctr[8]-1]=(*g).snc[2];
-        dOmdt[(*g).ctr[8]-1]=(*g).snc[3];
+        omega[(*g).ctr[8]-1]=(*g).snc[3];
+        dOmdt[(*g).ctr[8]-1]=(*g).snc[4];
         vr=va-omega.cross(x);
         a-=dOmdt.cross(x)+omega.cross(omega.cross(x))+2.*omega.cross(vr);
     }
     if ((*g).ctr[9]>0)
     {
-        a[(*g).ctr[9]-1]-=(*g).snc[5];
+        a[(*g).ctr[9]-1]-=(*g).snc[7];
     }
     return a;
 }
-
-
-
 double pressure(double rho, double rhoU, double rhoV, double rhoW, double E, global* g)
 {
     double gaM2=(*g).phy[4]*sq((*g).phy[0]);
