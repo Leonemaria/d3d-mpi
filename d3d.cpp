@@ -22,6 +22,8 @@ int main(int argc, char* argv[])
     MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &prov);
     int Nth = std::atoi(argv[1]);
     omp_set_num_threads(Nth);
+    int NRank;
+    MPI_Comm_size(MPI_COMM_WORLD, &NRank);
     int myRank;
     MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
 // Header
@@ -49,7 +51,7 @@ int main(int argc, char* argv[])
     {
         s="./"+caseName+"/input/BC.dat"; inputFileBC.open(s); chk(inputFileBC,s); // boundary conditions definition input file
         inputFileBC >> nBC; nBC++; skipLine(inputFileBC, 1); // reading number of boundary conditions
-        glb.ctr[6]=nBC;
+        glb.ctr[7]=nBC;
     }
     MPI_Bcast(&nBC,1,MPI_INT,0,MPI_COMM_WORLD);  
     boundaryCondition BC[nBC];
@@ -92,8 +94,8 @@ int main(int argc, char* argv[])
         }
     }
     MPI_Bcast(glb.phy,15,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Bcast(glb.ctr,9,MPI_INT,0,MPI_COMM_WORLD);
-    matrix forces(glb.ctr[5],6);
+    MPI_Bcast(glb.ctr,10,MPI_INT,0,MPI_COMM_WORLD);
+    matrix forces(glb.ctr[6],6);
 //
 //***************************************
    computationalElement cc(&glb); // initializes the computational element
@@ -291,9 +293,9 @@ int main(int argc, char* argv[])
             {
                H+=e[iC].getHist();
             }
-            double glH[H.nC()]={0.}; double glFo[6*glb.ctr[5]]={0.};
+            double glH[H.nC()]={0.}; double glFo[6*glb.ctr[6]]={0.};
             MPI_Reduce(H.data(),glH,H.nC(),MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
-            MPI_Reduce(forces.data(),glFo,6*glb.ctr[5],MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+            MPI_Reduce(forces.data(),glFo,6*glb.ctr[6],MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
             if(myRank==0)
             {
                 outputFileHist << i*glb.snc[1];
@@ -301,7 +303,7 @@ int main(int argc, char* argv[])
                 {
                     outputFileHist << " " << glH[j]/totVolume;
                 }                
-                for (int j=0; j<6*glb.ctr[5]; j++)
+                for (int j=0; j<6*glb.ctr[6]; j++)
                 {
                     outputFileHist << " " << glFo[j];
                 }                
@@ -309,6 +311,8 @@ int main(int argc, char* argv[])
             }
             forces.zero();
         }
+        if (i % glb.ctr[5]==0) {makeVtu(caseName,&cc,e,nCells,i,&glb,myRank,NRank);}
+
     }
     delete[] e; e=nullptr; delete[] xN; xN=nullptr;
     delete[] qSnd; qSnd=nullptr; delete[] qRcv; qRcv=nullptr;

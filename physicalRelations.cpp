@@ -38,14 +38,14 @@ void relativeQ(matrix* q, vector3D x, global *g) // corrects the momentum settin
 {
     double r, rho=(*q).get(0);
     vector3D v(0.,0.,0.), omega(0.,0.,0.);
-    if ((*g).ctr[7]>0)
-    {
-        omega[(*g).ctr[7]-1]=(*g).snc[2];
-        v=-omega.cross(x);
-    }
     if ((*g).ctr[8]>0)
     {
-        v[(*g).ctr[8]-1]-=(*g).snc[4];
+        omega[(*g).ctr[8]-1]=(*g).snc[2];
+        v=-omega.cross(x);
+    }
+    if ((*g).ctr[9]>0)
+    {
+        v[(*g).ctr[9]-1]-=(*g).snc[4];
     }
     (*q).add(1,v[0]*rho);
     (*q).add(2,v[1]*rho);
@@ -54,16 +54,16 @@ void relativeQ(matrix* q, vector3D x, global *g) // corrects the momentum settin
 vector3D fictitious(vector3D x, double u, double v, double w, global* g)  // this returns the fictitious force/mass
 {
     vector3D a(0.,0.,0.), va(u,v,w), vr(0.,0.,0.), omega(0.,0.,0.), dOmdt(0.,0.,0.);
-    if ((*g).ctr[7]>0)
+    if ((*g).ctr[8]>0)
     {
-        omega[(*g).ctr[7]-1]=(*g).snc[2];
-        dOmdt[(*g).ctr[7]-1]=(*g).snc[3];
+        omega[(*g).ctr[8]-1]=(*g).snc[2];
+        dOmdt[(*g).ctr[8]-1]=(*g).snc[3];
         vr=va-omega.cross(x);
         a-=dOmdt.cross(x)+omega.cross(omega.cross(x))+2.*omega.cross(vr);
     }
-    if ((*g).ctr[8]>0)
+    if ((*g).ctr[9]>0)
     {
-        a[(*g).ctr[8]-1]-=(*g).snc[5];
+        a[(*g).ctr[9]-1]-=(*g).snc[5];
     }
     return a;
 }

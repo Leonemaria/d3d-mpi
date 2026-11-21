@@ -34,7 +34,7 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  global* g, bou
     if (caseName=="naca0012") // flow around a cylinder of diameter D=1
     {
         double r=std::sqrt(sq(x[0])+sq(x[1]));
-        for (int iB=0; iB<(*g).ctr[6]; iB++)
+        for (int iB=0; iB<(*g).ctr[7]; iB++)
         {
             if (BC[iB].getKind(0)<20)
             {

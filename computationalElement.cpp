@@ -107,6 +107,48 @@ computationalElement::computationalElement(global* g)
             }
         }
     }
+    rqN=new vector3D[Nm];
+    for (int k=0; k<4; k++)
+    {
+        rqN[k]=vr[k];
+    }
+    switch(N)
+    {
+        case(2):
+            rqN[4]=(rqN[0]+rqN[1])/2.;
+            rqN[5]=(rqN[1]+rqN[2])/2.;
+            rqN[6]=(rqN[2]+rqN[0])/2.;
+            rqN[7]=(rqN[0]+rqN[3])/2.;
+            rqN[8]=(rqN[1]+rqN[3])/2.;
+            rqN[9]=(rqN[2]+rqN[3])/2.;
+        break;
+        case 3:
+            rqN[4]=(2.*vr[0]+vr[1])/3.;
+            rqN[5]=(vr[0]+2.*vr[1])/3.;
+            rqN[6]=(2.*vr[1]+vr[2])/3.;
+            rqN[7]=(vr[1]+2.*vr[2])/3.;
+            rqN[8]=(2.*vr[2]+vr[0])/3.;
+            rqN[9]=(vr[2]+2.*vr[0])/3.;
+            rqN[10]=(2.*vr[0]+vr[3])/3.;
+            rqN[11]=(vr[0]+2.*vr[3])/3.;
+            rqN[12]=(2.*vr[1]+vr[3])/3.;
+            rqN[13]=(vr[1]+2.*vr[3])/3.;
+            rqN[14]=(2.*vr[2]+vr[3])/3.;
+            rqN[15]=(vr[2]+2.*vr[3])/3.;
+            rqN[16]=(vr[0]+vr[1]+vr[3])/3.;
+            rqN[17]=(vr[1]+vr[2]+vr[3])/3.;
+            rqN[18]=(vr[2]+vr[0]+vr[3])/3.;
+            rqN[19]=(vr[0]+vr[2]+vr[1])/3.;
+        break;
+    }
+    PHIN.dim(Nm,Nm);    
+    for (int i=0; i<Nm; i++)
+    {
+        for (int j=0; j<Nm; j++)
+        {
+            PHIN.set(i,j,psi3D(iInd[j],jInd[j],kInd[j],rqN[i]));
+        }
+    }
 //    
 }
 // destructor of computationalElement
@@ -127,6 +169,10 @@ vector3D computationalElement::getRqS(int iS, int i)
 {
     return rq2[iS*Npq2+i];
 }
+vector3D computationalElement::getRqN(int i)
+{
+    return rqN[i];
+}
 matrix computationalElement::getPHI()
 {
     return PHI;
@@ -134,6 +180,10 @@ matrix computationalElement::getPHI()
 matrix computationalElement::getPHIS(int iS)
 {
     return PHIS[iS];
+}
+matrix computationalElement::getPHIN()
+{
+    return PHIN;
 }
 matrix computationalElement::getE()
 {

@@ -29,17 +29,19 @@ struct global
         // phy[12]:amplitude of the traslational oscillation
         // phy[13]:Strouhal of the traslational oscillation
         // phy[14]:initial phase[Deg] of the traslational oscillation (sinus)
-    int ctr[9]; // array of run controls
+    int ctr[10]={}; // array of run controls
      // ctr[0]: initial number of time steps
      // ctr[1]: final number of time steps
      // ctr[2]: solution damping period
      // ctr[3]: residual damping period
      // ctr[4]: traced quantities damping period
-     // ctr[5]: number of computed forces/moments
-     // ctr[6]: number of boundary conditions
-     // ctr[7]: index of the rotation axis
-     // ctr[8]: index of the translation axis
-    int sch[5]; // array of numerical scheme definers
+     // ctr[5]: damping period of vtu/pvtu files (for Paraview)
+     // ctr[6]: number of computed forces/moments
+     // ctr[7]: number of boundary conditions
+     
+     // ctr[8]: index of the rotation axis
+     // ctr[9]: index of the translation axis
+    int sch[5]={}; // array of numerical scheme definers
      // sch[0]: polynomials max order
      // sch[1]: kind of LES model
      // sch[2]: kind of convective intercell numerical flux

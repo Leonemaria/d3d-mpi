@@ -39,12 +39,12 @@ void readPhysics(std::ifstream &fin, global* g)
 }
 void readRelative(std::ifstream &fin, global* g)
 {
-    fin >> (*g).ctr[7]; skipLine(fin, 1);  // rotation axis index
+    fin >> (*g).ctr[8]; skipLine(fin, 1);  // rotation axis index
     fin >> (*g).phy[8]; skipLine(fin, 1); //  revolution Strouhal number
     fin >> (*g).phy[9]; skipLine(fin, 1); //  amplitude of the rotational oscillation [Deg]
     fin >> (*g).phy[10]; skipLine(fin, 1); // Strouhal of the rotational oscillation
     fin >> (*g).phy[11]; skipLine(fin, 1); // initial phase[Deg] of the rotational oscillation (sinus)
-    fin >> (*g).ctr[8]; skipLine(fin, 1);  // translation axis index
+    fin >> (*g).ctr[9]; skipLine(fin, 1);  // translation axis index
     fin >> (*g).phy[12]; skipLine(fin, 1); // amplitude of the translational oscillation
     fin >> (*g).phy[13]; skipLine(fin, 1); // Strouhal of the translational oscillation
     fin >> (*g).phy[14];                   // initial phase [Deg] of the translational oscillation (sinus)
@@ -59,9 +59,10 @@ void readRun(std::ifstream &fin, global* g)
     fin >> (*g).ctr[2]; skipLine(fin, 1);  // solution damping period
     fin >> (*g).ctr[3]; skipLine(fin, 1);  // residual damping period
     fin >> (*g).ctr[4]; skipLine(fin, 1); // integrated quantities damping period
+    fin >> (*g).ctr[5]; skipLine(fin, 1); // damping period of vtu/pvtu files
     fin >> (*g).snc[0]; skipLine(fin, 1); // time step
     fin >> (*g).sch[3]; skipLine(fin, 1); // source terms flag
-    fin >> (*g).ctr[5]; skipLine(fin, 1); // number of computed forces/moments
+    fin >> (*g).ctr[6]; skipLine(fin, 1); // number of computed forces/moments
     fin >> (*g).sch[4];                   // relative dynamics flag
 }
 double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D xN[], int nCells, physicalElement e[], global* g, computationalElement *cc, boundaryCondition BC[], int rank)
@@ -97,7 +98,6 @@ double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D x
 }
 void printOut(std::string caseName, physicalElement e[], int nCells, int it, const global* g, int rank)
 {
-    void subCellNodes(std::ofstream &fl, int p, int n0, int n1, int n2, int n3);
     std::string iterations=std::to_string(it); std::string process=std::to_string(rank);
     int Nm=nModes((*g).sch[0]);
     std::ofstream outputFileSol("./"+caseName+"/output/result_pr"+process+"_it"+iterations+".dat",std::ios::binary);
@@ -115,7 +115,172 @@ void printOut(std::string caseName, physicalElement e[], int nCells, int it, con
         }
     }
 }
-void subCellNodes(std::ofstream &fl, int p, int n0, int n1, int n2, int n3)
+void makeVtu(std::string caseName, computationalElement* cc, physicalElement e[], int nCells, int it, const global* g, int rank, int NRank)
 {
-    fl << 4 << " " << p+n0 << " " << p+n1 << " " << p+n2 << " " << p+n3 << std::endl;
+    std::string iterations=std::to_string(it); std::string process=std::to_string(rank);
+    iterations=std::to_string(it);
+    std::fstream density;
+    std::string fileNameD="./"+caseName+"/output/density_pr"+process+".dat";
+    std::fstream energy;
+    std::string fileNameE="./"+caseName+"/output/energy_pr"+process+".dat";
+    std::fstream velocity;
+    std::string fileNameV="./"+caseName+"/output/velocity_pr"+process+".dat";
+    density.clear();
+    density.open(fileNameD.c_str(),std::fstream::out);
+    density << std::setprecision(12);
+    energy.clear();
+    energy.open(fileNameE.c_str(),std::fstream::out);
+    energy << std::setprecision(12);
+    velocity.clear();
+    velocity.open(fileNameV.c_str(),std::fstream::out|std::fstream::out);
+    velocity << std::setprecision(12);
+    std::ofstream fileVisual;
+    std::string fileName="./"+caseName+"/output/paraview_pr"+process+"_it"+iterations+".vtu";
+    fileVisual.open(fileName.c_str(),std::fstream::out);
+    fileVisual << std::setprecision(12);
+    fileVisual << "<?xml version=\"1.0\"?>" << std::endl;
+    fileVisual << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl;
+    fileVisual << "  <UnstructuredGrid>" << std::endl;
+    int Nm=nModes((*g).sch[0]);
+    int Np=Nm, NpTot=0;
+    fileVisual << "    <Piece NumberOfPoints=\"" << Np*nCells << "\" NumberOfCells=\"" << nCells << "\">" << std::endl;
+    fileVisual << "      <Points>" << std::endl;
+    fileVisual << "        <DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+    double rho, u, v, w, E;
+    matrix AM(Np,nEq), qq(Np,nEq);
+    vector3D xP;
+    for (int iC=0; iC<nCells; iC++)
+    {
+        for (int k=0; k<Np; k++)
+        {
+            xP=e[iC].getX((*cc).getRqN(k)); fileVisual << "        " <<  xP[0] << " " << xP[1] << " " << xP[2] << std::endl;
+        }
+        for (int i=0; i<AM.size(); i++) {AM.set(i,*(e[iC].toAM()+i));}
+        qq=(*cc).getPHIN()*AM;
+        for (int k=0; k<Np; k++)
+        {
+            rho=qq.get(k,0);
+            density << rho << std::endl;
+            energy << qq.get(k,4) << std::endl;
+            velocity << qq.get(k,1)/rho << " " << qq.get(k,2)/rho << " " << qq.get(k,3)/rho << std::endl;
+        }
+        NpTot+=Np;                        
+    }
+    density.close();
+    density.clear();
+    energy.close();
+    energy.clear();
+    velocity.close();
+    velocity.clear();
+    fileVisual << "        </DataArray>" << std::endl;
+    fileVisual << "      </Points>" << std::endl;
+    fileVisual << "      <Cells>" << std::endl;
+    fileVisual << "        <DataArray type=\"Int32\" Name=\"connectivity\" format=\"ascii\">" << std::endl;
+    int p=0;
+    for (int iC=0; iC<nCells; iC++)
+    {    
+        switch((*g).sch[0])
+        {
+            case 1:
+                fileVisual << "        " << p << " " << p+1 << " " << p+2 << " " << p+3 << std::endl;
+                p+=4;
+            break;
+            case 2:
+                 fileVisual << "        " << p << " " << p+1 << " " << p+2 << " " << p+3 << " " << p+4 << 
+                                      " " << p+5 << " "  << p+6 << " " << p+7 << " " << p+8 << " " << p+9 << std::endl;
+                 p+=10;
+            break;
+            case 3:
+                 fileVisual << "        " << p << " " << p+1 << " " << p+2 << " " << p+3 << " " << p+4 << 
+                                      " " << p+5 << " "  << p+6 << " " << p+7 << " " << p+8 << " " << p+9 <<
+                                      " " << p+10 << " "  << p+11 << " " << p+12 << " " << p+13 << " " << p+14 <<
+                                      " " << p+15 << " "  << p+16 << " " << p+17 << " " << p+18 << " " << p+19 << std::endl;
+                 p+=20;
+            break;
+        }
+    }
+    fileVisual << "        </DataArray>" << std::endl;
+    fileVisual << "        <DataArray type=\"Int32\" Name=\"offsets\" format=\"ascii\">" << std::endl;
+    for (int iC=0; iC<nCells; iC++)
+    {    
+        fileVisual << "        " << (iC+1)*Np << std::endl;
+    }
+    fileVisual << "        </DataArray>" << std::endl;
+    fileVisual << "        <DataArray type=\"UInt8\" Name=\"types\" format=\"ascii\">" << std::endl;
+    for (int i=0; i<nCells; i++)
+    {
+        fileVisual << 71 << std::endl;
+    }
+    fileVisual << "        </DataArray>" << std::endl;
+    fileVisual << "      </Cells>" << std::endl;
+    fileVisual << "      <PointData Scalars=\"density\" Vectors=\"velocity\">" << std::endl;
+//
+    fileVisual << "        <DataArray type=\"Float64\" Name=\"density\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+    density.open(fileNameD.c_str(),std::fstream::in);
+    for (int k=0; k<NpTot; k++)
+    {
+        density >> rho;
+        fileVisual << "        " << rho << std::endl;
+    }
+    density.close();
+    fileVisual << "        </DataArray>" << std::endl;
+//
+    fileVisual << "        <DataArray type=\"Float64\" Name=\"energy\" NumberOfComponents=\"1\" format=\"ascii\">" << std::endl;
+    energy.open(fileNameE.c_str(),std::fstream::in);
+    for (int k=0; k<NpTot; k++)
+    {
+        energy >> E;
+        fileVisual << "        " << E << std::endl;
+    }
+    energy.close();
+    fileVisual << "        </DataArray>" << std::endl;
+//
+    fileVisual << "        <DataArray type=\"Float64\" Name=\"velocity\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
+    velocity.open(fileNameV.c_str(),std::fstream::out|std::fstream::in);
+    for (int k=0; k<NpTot; k++)
+    {
+        velocity >> u >> v >> w;
+        fileVisual << "        " << u << " " << v << " " << w << std::endl;
+    }
+    velocity.close();
+    fileVisual << "        </DataArray>" << std::endl;
+    fileVisual << "      </PointData>" << std::endl;
+    fileVisual << "      <CellData>" << std::endl;
+    fileVisual << "      </CellData>" << std::endl;
+    fileVisual << "    </Piece>" << std::endl;
+    fileVisual << "  </UnstructuredGrid>" << std::endl;
+    fileVisual << "</VTKFile>" << std::endl;
+    fileVisual.close();
+    if (rank==0)
+    {
+        std::string s="./"+caseName+"/output/paraview"+"_it"+iterations+".pvtu"; std::ofstream glbVisual(s); // global file for visualization
+        glbVisual << "<?xml version=\"1.0\"?>" << std::endl;
+        glbVisual << "<VTKFile type=\"PUnstructuredGrid\" version=\"0.1\" byte_order=\"LittleEndian\">" << std::endl;
+        glbVisual << "  <PUnstructuredGrid GhostLevel=\"0\">" << std::endl;
+        glbVisual << "    <PPoints>" << std::endl;
+        glbVisual << "      <PDataArray type=\"Float64\" NumberOfComponents=\"3\"/>" << std::endl;
+        glbVisual << "    </PPoints>" << std::endl;
+        glbVisual << "    <PCells>" << std::endl;
+        glbVisual << "      <PDataArray type=\"Int32\" Name=\"connectivity\"/>" << std::endl;
+        glbVisual << "      <PDataArray type=\"Int32\" Name=\"offsets\"/>" << std::endl;
+        glbVisual << "      <PDataArray type=\"UInt8\" Name=\"types\"/>" << std::endl;
+        glbVisual << "    </PCells>" << std::endl;
+        glbVisual << "    <PPointData>" << std::endl;
+        glbVisual << "      <PDataArray type=\"Float64\" Name=\"density\"/>" << std::endl;
+        glbVisual << "      <PDataArray type=\"Float64\" Name=\"energy\"/>" << std::endl;
+        glbVisual << "      <PDataArray type=\"Float64\" Name=\"velocity\" NumberOfComponents=\"3\"/>" << std::endl;
+        glbVisual << "    </PPointData>" << std::endl;
+        for (int iPr=0; iPr<NRank; iPr++)
+        {
+            fileName="paraview_pr"+std::to_string(iPr)+"_it"+iterations+".vtu";
+            glbVisual << "    <Piece Source=\""+fileName+"\"/>" << std::endl;
+        }
+        glbVisual << "  </PUnstructuredGrid>" << std::endl;
+        glbVisual << "</VTKFile>" << std::endl;        
+        glbVisual.close();
+    }
+    remove(fileNameD.c_str());    
+    remove(fileNameE.c_str());    
+    remove(fileNameV.c_str());
 }
+
