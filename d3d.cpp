@@ -273,7 +273,7 @@ int main(int argc, char* argv[])
             for (int iC=0; iC<nCells; iC++)
             {
                 residual+=std::abs(e[iC].getResidual());
-                eCFL=e[iC].CFL(glb.snc[1]);
+                eCFL=e[iC].CFL(glb.snc[0]);
                 if (eCFL>maxCFL) {maxCFL=eCFL;}
             }
             MPI_Reduce(&residual,&totResidual,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
