@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
         std::cout << "pol. order N=" << glb.sch[0] << std::endl;
         std::cout << "Num. of Modes=" << nModes(glb.sch[0]) << std::endl;
         std::cout << "src=" << glb.sch[3] << std::endl;
-        std::cout << "dt=" << glb.snc[1] << std::endl;
+        std::cout << "dt=" << glb.snc[0] << std::endl;
         std::cout << "LES model=" << glb.sch[1] << std::endl;
     }
     MPI_Bcast(&glb.snc[0],1,MPI_DOUBLE,0,MPI_COMM_WORLD);
@@ -298,7 +298,7 @@ int main(int argc, char* argv[])
             MPI_Reduce(forces.data(),glFo,6*glb.ctr[6],MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
             if(myRank==0)
             {
-                outputFileHist << i*glb.snc[1];
+                outputFileHist << i*glb.snc[0];
                 for (int j=0; j<H.nC(); j++)
                 {
                     outputFileHist << " " << glH[j]/totVolume;
