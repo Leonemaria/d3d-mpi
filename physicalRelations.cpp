@@ -36,22 +36,60 @@ void now(int i, int m, global* g)
     }
     (*g).snc[1]=time;
 }
-void relativeQ(matrix* q, vector3D x, global *g) // corrects the momentum setting relative velocities
+void relativeQ(matrix* q, vector3D x, global* g) // corrects the momentum setting relative velocities
 {
     double r, rho=(*q).get(0);
     vector3D v(0.,0.,0.), omega(0.,0.,0.);
     if ((*g).ctr[8]>0)
     {
-        omega[(*g).ctr[8]-1]=(*g).snc[2];
+        omega[(*g).ctr[8]-1]=(*g).snc[3];
         v=-omega.cross(x);
     }
     if ((*g).ctr[9]>0)
     {
-        v[(*g).ctr[9]-1]-=(*g).snc[4];
+        v[(*g).ctr[9]-1]-=(*g).snc[6]*cos((*g).snc[2]);
     }
     (*q).add(1,v[0]*rho);
     (*q).add(2,v[1]*rho);
     (*q).add(3,v[2]*rho);
+}
+void absoluteQ(matrix* q, vector3D x, global* g) // corrects the momentum setting "absolute" velocities
+{
+    double r, rho=(*q).get(0);
+    vector3D v(0.,0.,0.), omega(0.,0.,0.);
+    if ((*g).ctr[8]>0)
+    {
+        omega[(*g).ctr[8]-1]=(*g).snc[3];
+        v=omega.cross(x);
+    }
+    if ((*g).ctr[9]>0)
+    {
+        v[(*g).ctr[9]-1]+=(*g).snc[6]*cos((*g).snc[2]);
+    }
+    (*q).add(1,v[0]*rho);
+    (*q).add(2,v[1]*rho);
+    (*q).add(3,v[2]*rho);
+}
+vector3D absoluteX(vector3D x, global* g)
+{
+    vector3D X; double th=(*g).snc[2];
+    switch((*g).ctr[8])
+    {
+        case(1):
+            X[1]=x[1]*cos(th)-x[2]*sin(th);
+            X[2]=x[1]*sin(th)+x[2]*cos(th);
+        break;
+        case(2):
+            x[2]=x[2]*cos(th)-x[0]*sin(th);
+            X[0]=x[2]*sin(th)+x[0]*cos(th);
+        break;
+        case(3):
+            X[0]=x[0]*cos(th)-x[1]*sin(th);
+            X[1]=x[0]*sin(th)+x[1]*cos(th);
+        break;
+    }
+    if ((*g).ctr[9]>0) {X[(*g).ctr[9]-1]+=(*g).snc[5];}
+    return X;
 }
 vector3D fictitious(vector3D x, double u, double v, double w, global* g)  // this returns the fictitious force/mass
 {

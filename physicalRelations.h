@@ -10,6 +10,8 @@
 #include "computationalElement.h"
 #include "global.h"
 // this is a collection of usefull physical relations
+void absoluteQ(matrix* q, vector3D x, global* g);
+vector3D absoluteX(vector3D x, global* g);
 void relativeQ(matrix* q, vector3D x, global *g);
 vector3D fictitious(vector3D x, double u, double v, double w, global* g);
 void now(int i, int m, global* g);

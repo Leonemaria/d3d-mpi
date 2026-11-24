@@ -115,7 +115,7 @@ void printOut(std::string caseName, physicalElement e[], int nCells, int it, con
         }
     }
 }
-void makeVtu(std::string caseName, computationalElement* cc, physicalElement e[], int nCells, int it, const global* g, int rank, int NRank)
+void makeVtu(std::string caseName, computationalElement* cc, physicalElement e[], int nCells, int it, global* g, int rank, int NRank)
 {
     std::string iterations=std::to_string(it); std::string process=std::to_string(rank);
     iterations=std::to_string(it);
@@ -147,22 +147,30 @@ void makeVtu(std::string caseName, computationalElement* cc, physicalElement e[]
     fileVisual << "      <Points>" << std::endl;
     fileVisual << "        <DataArray type=\"Float64\" NumberOfComponents=\"3\" format=\"ascii\">" << std::endl;
     double rho, u, v, w, E;
-    matrix AM(Np,nEq), qq(Np,nEq);
-    vector3D xP;
+    matrix AM(Np,nEq), qq(Np,nEq), q(nEq);
+    vector3D xP, xA;
     for (int iC=0; iC<nCells; iC++)
     {
-        for (int k=0; k<Np; k++)
-        {
-            xP=e[iC].getX((*cc).getRqN(k)); fileVisual << "        " <<  xP[0] << " " << xP[1] << " " << xP[2] << std::endl;
-        }
         for (int i=0; i<AM.size(); i++) {AM.set(i,*(e[iC].toAM()+i));}
         qq=(*cc).getPHIN()*AM;
         for (int k=0; k<Np; k++)
         {
-            rho=qq.get(k,0);
+            q=qq.row(k);
+            xP=e[iC].getX((*cc).getRqN(k));
+            if ((*g).sch[4]>0)
+            {
+                xA=absoluteX(xP,g);
+                fileVisual << "        " <<  xA[0] << " " << xA[1] << " " << xA[2] << std::endl;
+                absoluteQ(&q,xP,g);
+            }
+            else
+            {
+                fileVisual << "        " <<  xP[0] << " " << xP[1] << " " << xP[2] << std::endl;
+            }
+            rho=q.get(0);
             density << rho << std::endl;
-            energy << qq.get(k,4) << std::endl;
-            velocity << qq.get(k,1)/rho << " " << qq.get(k,2)/rho << " " << qq.get(k,3)/rho << std::endl;
+            energy << q.get(4) << std::endl;
+            velocity << q.get(1)/rho << " " << q.get(2)/rho << " " << q.get(3)/rho << std::endl;
         }
         NpTot+=Np;                        
     }
