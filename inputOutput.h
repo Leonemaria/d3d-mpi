@@ -17,7 +17,7 @@ void readPhysics(std::ifstream &fin, global* g);
 void readRelative(std::ifstream &fin, global* g);   
 void readRun(std::ifstream &fin, global* g);
 double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D xN[], int nCells, physicalElement e[], global* glb, computationalElement *cc, boundaryCondition BC[], int rank);
-void printOut(std::string caseName, physicalElement e[], int nCells, int it, const global* g, int rank);
-void makeVtu(std::string caseName, computationalElement* cc, physicalElement e[], int nCells, int it, const global* g, int rank, int NRank);
+void printOut(std::string caseName, physicalElement e[], int nCells, int it, global* g, int rank);
+void makeVtu(std::string caseName, computationalElement* cc, physicalElement e[], int nCells, int it, global* g, int rank, int NRank);
 
 

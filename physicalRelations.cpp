@@ -80,7 +80,7 @@ vector3D absoluteX(vector3D x, global* g)
             X[2]=x[1]*sin(th)+x[2]*cos(th);
         break;
         case(2):
-            x[2]=x[2]*cos(th)-x[0]*sin(th);
+            X[2]=x[2]*cos(th)-x[0]*sin(th);
             X[0]=x[2]*sin(th)+x[0]*cos(th);
         break;
         case(3):

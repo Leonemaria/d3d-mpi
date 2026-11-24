@@ -1,6 +1,6 @@
 //inputOutput.cpp
 #include "inputOutput.h"
-void initialConditions(std::string caseName, int nCells, physicalElement e[], const global& glb, boundaryCondition BC[], int rank)  // set initial conditions
+void initialConditions(std::string caseName, int nCells, physicalElement e[], global& glb, boundaryCondition BC[], int rank)  // set initial conditions
 {
     if (glb.ctr[0]==0)
     {
@@ -96,7 +96,7 @@ double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D x
     }
     return 4.*V/3.;  
 }
-void printOut(std::string caseName, physicalElement e[], int nCells, int it, const global* g, int rank)
+void printOut(std::string caseName, physicalElement e[], int nCells, int it, global* g, int rank)
 {
     std::string iterations=std::to_string(it); std::string process=std::to_string(rank);
     int Nm=nModes((*g).sch[0]);
