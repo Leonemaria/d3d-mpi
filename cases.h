@@ -13,7 +13,8 @@
 #include "global.h"
 //
 // case distribution functions
-void iniFunc(std::string caseName, int i, vector3D x, matrix* qP,  global* g, boundaryCondition BC[]);
+void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  global* g, boundaryCondition BC[]);
+void pertFunc(std::string caseName, int i, vector3D x, matrix* q,  global* g,int rank);
 void srcFunc(std::string caseName, matrix* B, matrix* q, global* g);
 matrix varHist(std::string caseName, computationalElement* cE,double d, double dF, matrix *q, matrix* qA, matrix* q_x, matrix*q_y, matrix* q_z,
                global* g);

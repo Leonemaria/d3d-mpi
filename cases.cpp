@@ -31,7 +31,7 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  global* g, bou
         v=u_r*sinTh+u_t*cosTh;
         E=energy(rho,rho*u,rho*v,rho*w,p,g);
     }
-    if (caseName=="naca0012") // flow around a cylinder of diameter D=1
+    if (caseName=="airfoil") // flow around a wing section of chord c=1
     {
         double r=std::sqrt(sq(x[0])+sq(x[1]));
         for (int iB=0; iB<(*g).ctr[7]; iB++)
@@ -64,6 +64,19 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  global* g, bou
     (*q).set(i,2,rho*v);
     (*q).set(i,3,rho*w);
     (*q).set(i,4,E);
+}
+void pertFunc(std::string caseName, int i, vector3D x, matrix* q,  global* g,int rank)
+{
+    if (caseName=="airfoil")
+    {
+        double x0=-3., y0=-1., dx, dy, r, vt;
+        dx=x[0]-x0;
+        dy=x[1]-y0;
+        r=std::sqrt(sq(dx)+sq(dy));
+        vt=vortex(0,0.2,0.05,r);
+        (*q).add(i,1,-(*q).get(i,0)*vt*dy);
+        (*q).add(i,2,(*q).get(i,0)*vt*dx);
+    }
 }
 void srcFunc(std::string caseName, matrix* B, matrix* q, global* g)
 {
@@ -150,7 +163,7 @@ matrix varHist(std::string caseName, computationalElement* cE, double d, double 
             var.set(i,0,u);
         }
     }
-    if (caseName=="naca0012")
+    if (caseName=="airfoil")
     {
        var.dim(Np,1);
        for (int i=0; i<Np; i++)

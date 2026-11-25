@@ -68,6 +68,17 @@ void physicalElement::init(int my, computationalElement *c, vector3D x[], int iV
         }    
     }    
 }
+void physicalElement::addIniPert(std::string caseName, int rank)
+{
+    vector3D xP;
+    matrix qq=(*cE).getPHI()*A;
+    for (int i=0; i<Npq; i++)
+    {
+        xP=getX((*cE).getRq(i));
+        pertFunc(caseName,i,xP,&qq,glb,rank);
+    }
+    A=(*cE).getE()*qq;
+}
 double physicalElement::CFL(double dt)
 {
     matrix qq=(*cE).getPHI()*A;

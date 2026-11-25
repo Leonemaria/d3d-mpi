@@ -31,7 +31,7 @@ struct global
         // phy[12]:amplitude of the traslational oscillation
         // phy[13]:Strouhal of the traslational oscillation
         // phy[14]:initial phase[Deg] of the traslational oscillation (sinus)
-    int ctr[10]={}; // array of run controls
+    int ctr[11]={}; // array of run controls
      // ctr[0]: initial number of time steps
      // ctr[1]: final number of time steps
      // ctr[2]: solution damping period
@@ -43,6 +43,7 @@ struct global
      
      // ctr[8]: index of the rotation axis
      // ctr[9]: index of the translation axis
+     // ctr[10]:initial perturbation flag
     int sch[5]={}; // array of numerical scheme definers
      // sch[0]: polynomials max order
      // sch[1]: kind of LES model

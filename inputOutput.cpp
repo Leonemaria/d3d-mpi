@@ -1,8 +1,8 @@
 //inputOutput.cpp
 #include "inputOutput.h"
-void initialConditions(std::string caseName, int nCells, physicalElement e[], global& glb, boundaryCondition BC[], int rank)  // set initial conditions
+void initialConditions(std::string caseName, int nCells, physicalElement e[], global* g, boundaryCondition BC[], int rank)  // set initial conditions
 {
-    if (glb.ctr[0]==0)
+    if ((*g).ctr[0]==0)
     {
         for (int iC=0; iC<nCells; iC++)
         {
@@ -11,7 +11,7 @@ void initialConditions(std::string caseName, int nCells, physicalElement e[], gl
     }
     else
     {
-        double* aM; std::string st=std::to_string(glb.ctr[0]); std::string process=std::to_string(rank);
+        double* aM; std::string st=std::to_string((*g).ctr[0]); std::string process=std::to_string(rank);
         std::string s="./"+caseName+"/output/result_pr"+process+"_it"+st+".dat"; std::ifstream fin(s,std::ios::binary); chk(fin,s); 
         fin.seekg(sizeof(int)+sizeof(double), std::ios::cur);
 	int N;
@@ -25,6 +25,14 @@ void initialConditions(std::string caseName, int nCells, physicalElement e[], gl
             }
         }
     }
+    if ((*g).ctr[10]>0)
+    {
+        for (int iC=0; iC<nCells; iC++)
+        {
+            e[iC].addIniPert(caseName,rank);
+        }
+    }
+
 }  
 void readPhysics(std::ifstream &fin, global* g)
 {
@@ -63,7 +71,8 @@ void readRun(std::ifstream &fin, global* g)
     fin >> (*g).snc[0]; skipLine(fin, 1); // time step
     fin >> (*g).sch[3]; skipLine(fin, 1); // source terms flag
     fin >> (*g).ctr[6]; skipLine(fin, 1); // number of computed forces/moments
-    fin >> (*g).sch[4];                   // relative dynamics flag
+    fin >> (*g).sch[4]; skipLine(fin, 1); // relative dynamics flag
+    fin >> (*g).ctr[10];                  // initial perturbation flag
 }
 double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D xN[], int nCells, physicalElement e[], global* g, computationalElement *cc, boundaryCondition BC[], int rank)
 {

@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
         }
     }
     MPI_Bcast(glb.phy,15,MPI_DOUBLE,0,MPI_COMM_WORLD);
-    MPI_Bcast(glb.ctr,10,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Bcast(glb.ctr,11,MPI_INT,0,MPI_COMM_WORLD);
     matrix forces(glb.ctr[6],6);
 //
 //***************************************
@@ -199,7 +199,7 @@ int main(int argc, char* argv[])
     }
     std::vector<std::vector<int>>().swap(jnFaces);
 //
-    initialConditions(caseName,nCells,e,glb,BC,myRank);
+    initialConditions(caseName,nCells,e,&glb,BC,myRank);
     matrix H;
 // start time marching simulation       
     std::ofstream outputFileRes, outputFileHist, outputFileForce;

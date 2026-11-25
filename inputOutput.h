@@ -12,7 +12,7 @@
 #include "global.h"
 //
 // this is a collection of input/outpu functions
-void initialConditions(std::string caseName, int nCells,physicalElement e[], global& glb, boundaryCondition BC[], int rank);
+void initialConditions(std::string caseName, int nCells,physicalElement e[], global* g, boundaryCondition BC[], int rank);
 void readPhysics(std::ifstream &fin, global* g);   
 void readRelative(std::ifstream &fin, global* g);   
 void readRun(std::ifstream &fin, global* g);

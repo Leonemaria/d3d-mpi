@@ -25,5 +25,6 @@ double soundSpeed(matrix* q, global* g);
 double soundSpeed(matrix q, global* g);
 double Sutherland(double T, global* g);
 symTensor strainRate(matrix dx, matrix dy, matrix dz);
+double vortex(int k, double G, double rc, double r);
 #endif
 

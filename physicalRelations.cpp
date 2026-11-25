@@ -152,3 +152,14 @@ symTensor strainRate(matrix dx, matrix dy, matrix dz) // strain rate tensor (def
     Sd.set(2,0,dx.get(2)+dz.get(0)); Sd.set(2,1,dy.get(2)+dz.get(1)); Sd.set(2,2,2.*dz.get(2));
     return Sd; 
 }
+double vortex(int k, double G, double rc, double r) // tangential velocity/r of a 2D vortex
+{
+    double v=0.;
+    switch(k) // switch on the kind of vortex
+    {
+        case(0):
+            v=G/(2.*pi*std::sqrt(std::pow(rc,4)+std::pow(r,4)));
+        break;
+    }
+    return v;
+}

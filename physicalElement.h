@@ -27,6 +27,7 @@ class physicalElement
         physicalElement();
 // public methods declarations
         void init(int my, computationalElement *c, vector3D x[], int iV[], intMatrix l, global* g, boundaryCondition BC[], int myRank);
+        void addIniPert(std::string caseName, int rank);
         double CFL(double dt);
         void convFlux(matrix cF[], double rho, double rhoU, double rhoV, double rhoW, double E);
         void convFluxes(matrix flxq[], matrix* qq);
