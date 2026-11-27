@@ -20,8 +20,6 @@ int main(int argc, char* argv[])
 {
     int prov;
     MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &prov);
-    int Nth = std::atoi(argv[1]);
-    omp_set_num_threads(Nth);
     int NRank;
     MPI_Comm_size(MPI_COMM_WORLD, &NRank);
     int myRank;
@@ -40,7 +38,6 @@ int main(int argc, char* argv[])
         ambientFile.close();
         std::cout << "Running case: " << caseName << std::endl;
     }
-    MPI_Bcast(&Nth,1,MPI_INT,0,MPI_COMM_WORLD);
     MPI_Bcast(&nameSize,1,MPI_INT,0,MPI_COMM_WORLD);
     caseName.resize(nameSize);
     MPI_Bcast(&caseName[0],nameSize,MPI_CHAR,0,MPI_COMM_WORLD);
@@ -115,7 +112,6 @@ int main(int argc, char* argv[])
     MPI_Reduce(&volume, &totVolume, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD); // initialization    
     MPI_Reduce(&nCells, &totCells, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD); // initialization    
     if (myRank==0) {std::cout << "Volume=" << totVolume << std::endl; std::cout << "Num. of Cells=" << totCells << std::endl;}
-    MPI_Barrier(MPI_COMM_WORLD);   
 //***************************************
 // preparation for mpi messaging
     int nJnPr=0; // number of joined processes
@@ -183,7 +179,6 @@ int main(int argc, char* argv[])
         }
     }
     MPI_Waitall(nJnPr,rqs,MPI_STATUSES_IGNORE);
-    MPI_Barrier(MPI_COMM_WORLD);
 //  
     for (int i=0; i<nJnPr; i++)
     {
@@ -239,8 +234,7 @@ int main(int argc, char* argv[])
                 MPI_Irecv(qRcv[i].data(),qRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*2+1]); // the linking indices are received
             }
             MPI_Waitall(2*nJnPr,rqs,MPI_STATUSES_IGNORE);
-            MPI_Barrier(MPI_COMM_WORLD);   
-//
+ //
             #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
             {
@@ -255,7 +249,6 @@ int main(int argc, char* argv[])
                 MPI_Irecv(fRcv[i].data(),fRcv[i].size(),MPI_DOUBLE,jnPr[i],1,MPI_COMM_WORLD,&rqs[i*2+1]); // the linking indices are received
             }
             MPI_Waitall(2*nJnPr,rqs,MPI_STATUSES_IGNORE);
-            MPI_Barrier(MPI_COMM_WORLD);
 //
             #pragma omp parallel for schedule(static)
             for (int iC=0; iC<nCells; iC++)
