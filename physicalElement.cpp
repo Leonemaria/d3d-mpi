@@ -751,7 +751,7 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
         break;
         case 12: // Weak-Riemann farfield condition, neglecting viscous effects (Mengaldo et al. 2014, p.7) 
         {
-        // The assigned values are: rho=qB[0], p=qB[5], u=qB[6], v=qB[7], w=qB[8]
+        // The assigned values are: rho=qB[0], p=qB[5], u=qB[6], v=0., w=0.
             matrix qInt(1,nEq); matrix qExt(1,nEq);
             matrix bF[3]; bF[0].dim(1,nEq); bF[1].dim(1,nEq); bF[2].dim(1,nEq);
             for (int i=0; i<Npq2; i++)
@@ -759,8 +759,8 @@ void physicalElement::boundaryFluxes(matrix* dx, matrix* dy, matrix* dz, int iS,
                 qInt=qS[iS].row(i);
                 qExt.set(0,0,(*BC).getQ(0)); // external density equal to farfield value
                 qExt.set(0,1,(*BC).getQ(6)*qExt.get(0)); // x momentum external value (equal to farfield value)
-                qExt.set(0,2,(*BC).getQ(7)*qExt.get(0)); // y momentum external value (equal to farfield value)
-                qExt.set(0,3,(*BC).getQ(8)*qExt.get(0)); // z momentum external value (equal to farfield value)
+                qExt.set(0,2,0.); // y momentum external value (equal to farfield value)
+                qExt.set(0,3,0.); // z momentum external value (equal to farfield value)
                 qExt.set(0,4,energy(qExt.get(0),qExt.get(1),qExt.get(2),qExt.get(3),(*BC).getQ(5),glb)); // external energy  (equal to farfield value)
                 if ((*glb).sch[4]>0) {relativeQ(&qExt,getX((*cE).getRqS(iS,i)),glb);}
                 //

@@ -36,17 +36,16 @@ void boundaryCondition::input(std::ifstream &iFile, global* g)
         break;
         case(12): // Weak-Riemann farfield (inlet/outlet) condition (with speed and angles)
         {
-            double alpha, beta, V;
+            double alpha, beta;
             iFile >> qB[0]; // rho_inf
             iFile >> qB[5]; // p_inf
-            iFile >> V; // air speed
+            iFile >> qB[6]; // V_inf
             iFile >> alpha; std::cout << "Alpha=" << alpha << "°\n";
             alpha*=radPerDeg; // incidence angle
             iFile >> beta; std::cout << "Beta=" << beta << "°\n";
             beta*=radPerDeg; // incidence angle
-            qB[6]=V*cos(alpha)*cos(beta); // u_inf
-            qB[7]=V*sin(alpha)*cos(beta); // v_inf
-            qB[8]=V*sin(beta); // w_inf
+            qB[7]=alpha; // v_inf
+            qB[8]=beta; // w_inf
         }
         break;
         case(21): // Weak-Riemann isothermal no-slip

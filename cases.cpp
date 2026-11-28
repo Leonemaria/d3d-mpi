@@ -43,10 +43,20 @@ void iniFunc(std::string caseName, int i, vector3D x, matrix* q,  global* g, bou
                 if (r<1.) {u=0.;}
                 else
                 {
-                    u=BC[iB].getQ(6);
-                    v=BC[iB].getQ(7);
-                    w=BC[iB].getQ(8);
-                }
+                    switch(BC[iB].getKind(0))
+                    {
+                        case(11):
+                            u=BC[iB].getQ(6);
+                            v=BC[iB].getQ(7);
+                            w=BC[iB].getQ(8);
+                        break;
+                        case(12):
+                            u=BC[iB].getQ(6);
+                            v=0.;
+                            w=0.;
+                        break;
+                    }
+                }    
             }
         }
         E=energy(rho,rho*u,rho*v,rho*w,p,g);

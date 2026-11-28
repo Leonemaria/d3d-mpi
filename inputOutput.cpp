@@ -76,11 +76,33 @@ void readRun(std::ifstream &fin, global* g)
 }
 double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D xN[], int nCells, physicalElement e[], global* g, computationalElement *cc, boundaryCondition BC[], int rank)
 {
-    double V=0.;
+    bool meshRot=false;
+    double Vol=0., alpha, beta, x, y, z;
     int iN=-1, iC=-1, iVer[4];
+    for (int iB=0; iB<(*g).ctr[7]; iB++)
+    {
+        if (BC[iB].getKind(0)==12)
+        {
+            meshRot=true;
+            alpha=BC[iB].getQ(7);
+            beta=BC[iB].getQ(8);
+        }
+    }
     while (iN<nNodes-1) // reading of the grid point list (the first part of mesh file)
     {
         fin1 >> iN >> xN[iN][0] >> xN[iN][1] >> xN[iN][2]; //grid point reading from mesh file (each point is labeled by a sequential number and is defined by three coordinates)
+    }
+    if (meshRot)
+    {
+        for (int i=0; i<nNodes; i++)
+        {
+            x=xN[i][0]; y=xN[i][1]; z=xN[i][2];
+            xN[i][0]=x*cos(alpha)+y*sin(alpha);
+            xN[i][1]=-x*sin(alpha)+y*cos(alpha);
+            x=xN[i][0]; z=xN[i][2];
+            xN[i][0]=x*cos(beta)-z*sin(beta);
+            xN[i][2]=-x*sin(beta)+z*cos(beta);
+        }      
     }
     intMatrix l(4,4);
     int i0, i1, i2, i3, i4, i5, i6, i7, i8, i9, i10, i11, i12, i13, i14, i15;
@@ -101,9 +123,9 @@ double readMesh(std::ifstream &fin1, std::ifstream &fin2, int nNodes, vector3D x
         // the second one is the index of the linked cell, the third one is the indices of the linked side
         // and the fourth is the index of the point linked to 0 point (or the boundary contition)
         e[iC].init(iC,cc,&xN[0],iVer,l,g,BC,rank); // physical cell initialization
-        V+=e[iC].Jacobian();
+        Vol+=e[iC].Jacobian();
     }
-    return 4.*V/3.;  
+    return 4.*Vol/3.;  
 }
 void printOut(std::string caseName, physicalElement e[], int nCells, int it, global* g, int rank)
 {
